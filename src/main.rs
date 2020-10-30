@@ -30,27 +30,21 @@
 use legion::*;
 use macroquad::*;
 
-const TILE_WIDTH: f32 = 16.;
-const TILE_HEIGHT: f32 = 16.;
+mod map;
+use crate::map::tiles::{TileAtlas, Tiles};
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Position {
     pos: Vec2,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Acceleration {
-    acc: Vec2,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Camera {
     target: Vec2,
     zoom: Vec2,
 }
 
+/// Render the fixed screen ui. (after set_default_camera())
 fn draw_ui() {
-    // Screen space, render fixed ui
-    set_default_camera();
     let text_color: Color = Color([100, 100, 100, 150]);
     draw_text(",aoe to move camera", 10.0, 0.0, 30.0, text_color);
     draw_text(
@@ -62,40 +56,50 @@ fn draw_ui() {
     );
 }
 
+/// Get and handle the input related to the camera.
 fn move_camera(camera: &mut Camera) {
-    // scroll
+    // Move the camera:
+    // UP
     if is_key_down(KeyCode::Comma) {
         camera
             .target
             .set_y(camera.target.y() + 0.01 / camera.zoom.x())
     }
+    // DOWN
     if is_key_down(KeyCode::O) {
         camera
             .target
             .set_y(camera.target.y() - 0.01 / camera.zoom.x())
     }
+    // LEFT
     if is_key_down(KeyCode::A) {
         camera
             .target
             .set_x(camera.target.x() - 0.01 / camera.zoom.x())
     }
+    // RIGHT
     if is_key_down(KeyCode::E) {
         camera
             .target
             .set_x(camera.target.x() + 0.01 / camera.zoom.x())
     }
-    // zoom
+    // Change the camera zoom:
+    // Further
     if is_key_down(KeyCode::PageUp) {
         camera.zoom.set_x(camera.zoom.x() * 0.98);
         camera.zoom.set_y(camera.zoom.y() * 0.98);
     }
+    // Closer
     if is_key_down(KeyCode::PageDown) {
         camera.zoom.set_x(camera.zoom.x() / 0.98);
         camera.zoom.set_y(camera.zoom.y() / 0.98);
     }
 }
 
-fn get_relative_mouse_position(camera: &Camera) -> Vec2 {
+/// Get the mouse coordinates inside the game world.
+fn relative_mouse_position(camera: &Camera) -> Vec2 {
+    // Takes the mouse coordinates on window and translates that
+    // to game world coordinates.
     let mouse = mouse_position();
     Vec2::new(
         ((mouse.0 - screen_width() / 2.0) / (screen_width() / 2.0) / camera.zoom.x())
@@ -107,53 +111,23 @@ fn get_relative_mouse_position(camera: &Camera) -> Vec2 {
             + camera.target.y(),
     )
 }
-
-enum Tile {
-    BlueFloor,
-}
-
-impl Tile {
-    const fn value(&self) -> (f32, f32) {
-        match *self {
-            Tile::BlueFloor => (1., 4.),
-        }
-    }
-}
-
-struct TileAtlas {
-    texture: Texture2D,
-    tile_width: f32,
-    tile_height: f32,
-}
-
-impl TileAtlas {
-    fn draw_tile(&self, tile: Tile, x: f32, y: f32) {
-        let (atlas_x, atlas_y) = tile.value();
-        let params = DrawTextureParams {
-            dest_size: Some(vec2(1.0, 1.0)),
-            source: Some(Rect::new(
-                self.tile_width * atlas_x,
-                self.tile_height * atlas_y,
-                self.tile_width,
-                self.tile_height,
-            )),
-            rotation: std::f32::consts::PI,
-        };
-        draw_texture_ex(self.texture, x, y, WHITE, params);
-    }
-}
-
 #[macroquad::main("Name")]
 async fn main() {
+    // Init world and resources of legion ECS.
     let mut world = World::default();
     let mut resources = Resources::default();
-    let texture = load_texture("Floor.png").await;
-    let atlas = TileAtlas {
-        texture,
-        tile_width: TILE_WIDTH,
-        tile_height: TILE_HEIGHT,
-    };
 
+    // Construct a systems schedule of legion ECS.
+    let mut schedule = Schedule::builder().build();
+
+    // Load assets.
+    let texture = load_texture("assets/Tiles.png").await;
+
+    // Construct TileAtlas.
+    let atlas = TileAtlas::new(texture, 32., 32.);
+    resources.insert(atlas.clone());
+
+    // Main camera.
     let starting_zoom = 0.05;
     let mut main_camera = Camera {
         target: vec2(0.0, 0.0),
@@ -163,42 +137,51 @@ async fn main() {
         ),
     };
 
+    // We need to save the state of the mouse button
+    // to detect mouse clicks and not just "is pressed"
     let mut mouse_pressed = false;
 
-    // construct a schedule (you should do this on init)
-    let mut schedule = Schedule::builder().build();
-
+    // The main infinite "Input Update Draw" loop.
     loop {
-        // Update
-
-        let mouse_position = get_relative_mouse_position(&main_camera);
-        move_camera(&mut main_camera);
+        // ===========Input===========
+        // Get the mouse position inside the game world.
+        let mouse_position = relative_mouse_position(&main_camera);
         if is_key_down(KeyCode::Right) {}
         if is_key_down(KeyCode::Left) {}
         if is_key_down(KeyCode::Down) {}
         if is_key_down(KeyCode::Up) {}
         if is_mouse_button_down(MouseButton::Left) {
             if mouse_pressed == false {
-                let pos = get_relative_mouse_position(&main_camera);
-                info!("Mouse pressed at x:{} , y:{}", pos.x(), pos.y())
+                let pos = relative_mouse_position(&main_camera);
+                debug!("Mouse click at relative x:{} , y:{}", pos.x(), pos.y())
             }
             mouse_pressed = true;
         } else {
             mouse_pressed = false;
         }
 
-        // Draw
+        // ===========Update===========
+        // Checks for input related to camera and changes it accordingly.
+        move_camera(&mut main_camera);
 
+        // Run initialized systems schedule of legion ECS.
+        schedule.execute(&mut world, &mut resources);
+
+        // ===========Draw===========
+        // Fill the canvas with white.
         clear_background(Color([255, 255, 255, 255]));
 
-        // Camera space, render game objects
+        // --- Camera space, render game objects.
         set_camera(Camera2D {
             target: main_camera.target,
             zoom: main_camera.zoom,
             ..Default::default()
         });
 
-        atlas.draw_tile(Tile::BlueFloor, 0., 0.);
+        // Draw the map.
+        atlas.draw_tile(Tiles::Wall, vec2(0., 0.));
+
+        // Draw the mouse cursor.
         draw_circle(
             mouse_position.x(),
             mouse_position.y(),
@@ -206,10 +189,9 @@ async fn main() {
             Color([200, 150, 225, 255]),
         );
 
+        // --- Fixed screen space, render ui.
+        set_default_camera();
         draw_ui();
-
-        // run our schedule (you should do this each update)
-        schedule.execute(&mut world, &mut resources);
 
         next_frame().await
     }
