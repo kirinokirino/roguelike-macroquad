@@ -108,11 +108,51 @@ fn get_relative_mouse_position(camera: &Camera) -> Vec2 {
     )
 }
 
+enum Tile {
+    BlueFloor,
+}
+
+impl Tile {
+    const fn value(&self) -> (f32, f32) {
+        match *self {
+            Tile::BlueFloor => (1., 4.),
+        }
+    }
+}
+
+struct TileAtlas {
+    texture: Texture2D,
+    tile_width: f32,
+    tile_height: f32,
+}
+
+impl TileAtlas {
+    fn draw_tile(&self, tile: Tile, x: f32, y: f32) {
+        let (atlas_x, atlas_y) = tile.value();
+        let params = DrawTextureParams {
+            dest_size: Some(vec2(1.0, 1.0)),
+            source: Some(Rect::new(
+                self.tile_width * atlas_x,
+                self.tile_height * atlas_y,
+                self.tile_width,
+                self.tile_height,
+            )),
+            rotation: std::f32::consts::PI,
+        };
+        draw_texture_ex(self.texture, x, y, WHITE, params);
+    }
+}
+
 #[macroquad::main("Name")]
 async fn main() {
     let mut world = World::default();
     let mut resources = Resources::default();
-    let texture: Texture2D = load_texture("Floor.png").await;
+    let texture = load_texture("Floor.png").await;
+    let atlas = TileAtlas {
+        texture,
+        tile_width: TILE_WIDTH,
+        tile_height: TILE_HEIGHT,
+    };
 
     let starting_zoom = 0.05;
     let mut main_camera = Camera {
@@ -158,18 +198,7 @@ async fn main() {
             ..Default::default()
         });
 
-        let params = DrawTextureParams {
-            dest_size: Some(vec2(1.0, 1.0)),
-            source: Some(Rect::new(
-                TILE_WIDTH * 1.,
-                TILE_HEIGHT * 4.,
-                TILE_WIDTH,
-                TILE_HEIGHT,
-            )),
-            rotation: std::f32::consts::PI,
-        };
-        draw_texture_ex(texture, 0., 0., WHITE, params);
-
+        atlas.draw_tile(Tile::BlueFloor, 0., 0.);
         draw_circle(
             mouse_position.x(),
             mouse_position.y(),
