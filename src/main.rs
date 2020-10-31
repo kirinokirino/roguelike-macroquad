@@ -26,18 +26,22 @@
     clippy::future_not_send
 )]
 
-use legion::{Resources, Schedule, World};
+use legion::{system, Resources, Schedule, World};
 use macroquad::{
     clear_background, debug, draw_circle, draw_text, is_key_down, is_mouse_button_down,
     load_texture, next_frame, set_camera, set_default_camera, vec2, warn, Camera2D, Color, KeyCode,
-    MouseButton,
+    MouseButton, Vec2,
 };
 
 mod map;
+use crate::map::generators::random_map;
 use crate::map::tiles::{TileAtlas, Tiles};
 
 mod camera;
 use crate::camera::{relative_mouse_position, Camera};
+
+pub const WIDTH: i32 = 40;
+pub const HEIGHT: i32 = 25;
 
 #[macroquad::main("kiriRoguelike")]
 async fn main() {
@@ -46,14 +50,14 @@ async fn main() {
     let mut resources = Resources::default();
 
     // Construct a systems schedule of legion ECS.
-    let mut schedule = Schedule::builder().build();
+    let mut schedule = Schedule::builder().add_system(draw_map_system()).build();
 
     // Load assets.
     let texture = load_texture("assets/Tiles.png").await;
 
     // Construct TileAtlas.
     let atlas = TileAtlas::new(texture, 32., 32.);
-    resources.insert(atlas.clone());
+    resources.insert(atlas);
 
     // Initialize main camera.
     let mut main_camera = Camera::default();
@@ -62,6 +66,9 @@ async fn main() {
     // to detect mouse clicks and not just "is pressed"
     let mut left_mouse_pressed = false;
 
+    let weirdness = random_map();
+    let map = generate_map(&weirdness);
+    world.push((map,));
     // The main infinite "Input Update Draw" loop.
     loop {
         // ===========Input===========
@@ -91,8 +98,7 @@ async fn main() {
             ..macroquad::Camera2D::default()
         });
 
-        // Draw the map.
-        atlas.draw_tile(&Tiles::Wall, vec2(0., 0.));
+        schedule.execute(&mut world, &mut resources);
 
         // Draw the mouse cursor.
         draw_circle(
@@ -107,6 +113,19 @@ async fn main() {
         draw_ui();
 
         next_frame().await
+    }
+}
+
+#[derive(Debug)]
+pub struct Tile {
+    pub pos: Vec2,
+    pub kind: Tiles,
+}
+
+#[system(for_each)]
+fn draw_map(tiles: &Vec<Tile>, #[resource] atlas: &TileAtlas) {
+    for tile in tiles {
+        atlas.draw_tile(tile.kind, &tile.pos);
     }
 }
 
@@ -134,10 +153,42 @@ fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {
     if is_mouse_button_down(MouseButton::Left) {
         if !left_mouse_pressed {
             let pos = relative_mouse_position(&main_camera);
-            debug!("Mouse click at relative x:{} , y:{}", pos.x(), pos.y())
+
+            debug!("Mouse click at relative x:{} , y:{}", pos.x(), pos.y());
         }
         true
     } else {
         false
     }
+}
+
+pub fn generate_map(map: &[Tiles]) -> Vec<Tile> {
+    let mut y = 0;
+    let mut x = 0;
+    let mut res: Vec<Tile> = Vec::with_capacity((WIDTH * HEIGHT) as usize);
+    for tile in map.iter() {
+        // Render a tile depending upon the tile type
+        match tile {
+            Tiles::Grass => res.push(Tile {
+                pos: vec2(x as f32, y as f32),
+                kind: Tiles::Grass,
+            }),
+            Tiles::Wall => res.push(Tile {
+                pos: vec2(x as f32, y as f32),
+                kind: Tiles::Wall,
+            }),
+            Tiles::Pengu => res.push(Tile {
+                pos: vec2(x as f32, y as f32),
+                kind: Tiles::Pengu,
+            }),
+        }
+
+        // Move the coordinates
+        x += 1;
+        if x > WIDTH - 1 {
+            x = 0;
+            y += 1;
+        }
+    }
+    res
 }

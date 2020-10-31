@@ -1,4 +1,6 @@
 use macroquad::{draw_texture_ex, vec2, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tiles {
     Wall,
     Grass,
@@ -30,7 +32,7 @@ impl TileAtlas {
             tile_height,
         }
     }
-    pub fn draw_tile(&self, tile: &Tiles, pos: Vec2) {
+    pub fn draw_tile(&self, tile: Tiles, pos: &Vec2) {
         let (atlas_x, atlas_y) = tile.value();
         let params = DrawTextureParams {
             dest_size: Some(vec2(1.0, 1.0)),
