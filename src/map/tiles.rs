@@ -1,5 +1,6 @@
 use macroquad::{draw_texture_ex, vec2, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
 
+/// Available kinds of Tiles. `value()` is their position on the `TileAtlas`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tiles {
     Wall,
@@ -8,8 +9,8 @@ pub enum Tiles {
 }
 
 impl Tiles {
-    const fn value(&self) -> (f32, f32) {
-        match *self {
+    const fn value(self) -> (f32, f32) {
+        match self {
             Self::Wall => (0., 0.),
             Self::Grass => (1., 0.),
             Self::Pengu => (2., 0.),
@@ -17,6 +18,7 @@ impl Tiles {
     }
 }
 
+/// Is used to split one `Texture2D` into different tiles.
 #[derive(Clone, Debug)]
 pub struct TileAtlas {
     texture: Texture2D,
@@ -25,6 +27,7 @@ pub struct TileAtlas {
 }
 
 impl TileAtlas {
+    /// Initialize the atlas from the texture and tile size.
     pub const fn new(texture: Texture2D, tile_width: f32, tile_height: f32) -> Self {
         Self {
             texture,
@@ -32,7 +35,9 @@ impl TileAtlas {
             tile_height,
         }
     }
-    pub fn draw_tile(&self, tile: Tiles, pos: &Vec2) {
+
+    /// Draw provided Tiles kind (e.g. `Tiles::Grass`) to the given position.
+    pub fn draw_tile(&self, tile: Tiles, pos: Vec2) {
         let (atlas_x, atlas_y) = tile.value();
         let params = DrawTextureParams {
             dest_size: Some(vec2(1.0, 1.0)),

@@ -1,5 +1,7 @@
 use macroquad::{is_key_down, mouse_position, screen_height, screen_width, vec2, KeyCode, Vec2};
 
+const SCROLL_SPEED: f32 = 0.02;
+const ZOOM_SPEED: f32 = 0.98;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Camera {
     target: Vec2,
@@ -48,35 +50,35 @@ pub fn scroll(camera: &mut Camera) {
     if is_key_down(KeyCode::Comma) {
         camera
             .target
-            .set_y(camera.target.y() + 0.01 / camera.zoom.x())
+            .set_y(camera.target.y() + SCROLL_SPEED / camera.zoom.x())
     }
     // DOWN
     if is_key_down(KeyCode::O) {
         camera
             .target
-            .set_y(camera.target.y() - 0.01 / camera.zoom.x())
+            .set_y(camera.target.y() - SCROLL_SPEED / camera.zoom.x())
     }
     // LEFT
     if is_key_down(KeyCode::A) {
         camera
             .target
-            .set_x(camera.target.x() - 0.01 / camera.zoom.x())
+            .set_x(camera.target.x() - SCROLL_SPEED / camera.zoom.x())
     }
     // RIGHT
     if is_key_down(KeyCode::E) {
         camera
             .target
-            .set_x(camera.target.x() + 0.01 / camera.zoom.x())
+            .set_x(camera.target.x() + SCROLL_SPEED / camera.zoom.x())
     }
     // Change the camera zoom:
     // Further
     if is_key_down(KeyCode::Apostrophe) {
-        camera.zoom.set_x(camera.zoom.x() * 0.98);
-        camera.zoom.set_y(camera.zoom.y() * 0.98);
+        camera.zoom.set_x(camera.zoom.x() * ZOOM_SPEED);
+        camera.zoom.set_y(camera.zoom.y() * ZOOM_SPEED);
     }
     // Closer
     if is_key_down(KeyCode::Period) {
-        camera.zoom.set_x(camera.zoom.x() / 0.98);
-        camera.zoom.set_y(camera.zoom.y() / 0.98);
+        camera.zoom.set_x(camera.zoom.x() / ZOOM_SPEED);
+        camera.zoom.set_y(camera.zoom.y() / ZOOM_SPEED);
     }
 }

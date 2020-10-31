@@ -14,8 +14,8 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn new(x: i32, y: i32) -> Point {
-        Point { x, y }
+    pub const fn new(x: i32, y: i32) -> Self {
+        Self { x, y }
     }
 }
 pub struct Rect {
@@ -24,8 +24,8 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub fn new(top_left: Point, width: i32, height: i32) -> Rect {
-        Rect {
+    pub const fn new(top_left: Point, width: i32, height: i32) -> Self {
+        Self {
             top_left,
             down_right: Point {
                 x: top_left.x + width,
@@ -34,22 +34,22 @@ impl Rect {
         }
     }
 
-    pub fn from_points(top_left: Point, down_right: Point) -> Rect {
-        Rect {
+    pub const fn _from_points(top_left: Point, down_right: Point) -> Self {
+        Self {
             top_left,
             down_right,
         }
     }
 
     // Returns true if this overlaps with other
-    pub fn intersect(&self, other: &Rect) -> bool {
+    pub const fn intersect(&self, other: &Self) -> bool {
         self.top_left.x <= other.down_right.x
             && self.down_right.x >= other.top_left.x
             && self.top_left.y <= other.down_right.y
             && self.down_right.y >= other.top_left.y
     }
 
-    pub fn center(&self) -> Point {
+    pub const fn center(&self) -> Point {
         Point {
             x: (self.top_left.x + self.down_right.x) / 2,
             y: (self.top_left.y + self.down_right.y) / 2,

@@ -7,7 +7,6 @@
     clippy::else_if_without_else,
     clippy::float_cmp_const,
     clippy::indexing_slicing,
-    clippy::integer_division,
     clippy::let_underscore_must_use,
     clippy::mem_forget,
     clippy::multiple_inherent_impl,
@@ -23,18 +22,19 @@
     clippy::missing_docs_in_private_items,
     clippy::unknown_clippy_lints,
     clippy::expect_used,
-    clippy::future_not_send
+    clippy::future_not_send,
+    clippy::explicit_iter_loop
 )]
 
-use legion::*;
+use legion::{system, IntoQuery, Resources, Schedule, World};
 use macroquad::{
-    clear_background, debug, draw_circle, draw_text, is_key_down, is_key_pressed,
-    is_mouse_button_down, load_texture, next_frame, set_camera, set_default_camera, vec2, warn,
-    Camera2D, Color, KeyCode, MouseButton, Vec2,
+    clear_background, debug, draw_circle, draw_text, is_key_pressed, is_mouse_button_down,
+    load_texture, next_frame, set_camera, set_default_camera, vec2, warn, Camera2D, Color, KeyCode,
+    MouseButton, Vec2,
 };
 
 mod map;
-use crate::map::generators::{random_map, rooms_map};
+use crate::map::generators::rooms_map;
 use crate::map::tiles::{TileAtlas, Tiles};
 
 mod camera;
@@ -72,12 +72,21 @@ async fn main() {
     // to detect mouse clicks and not just "is pressed"
     let mut left_mouse_pressed = false;
 
-    let weirdness = rooms_map();
-    let map = generate_map(&weirdness);
+    // Tiles is an enum of tile types, like Wall, Grass, Pengu.
+    // Tile is a concrete struct with associated map coordinates.
+    // `rooms_map()` is a generator that provides a layout. (There are
+    // different types of generators)
+    let layout = rooms_map();
+    // `generate_map()` takes that layout and transforms it into
+    // a vector of tiles.
+    let map = generate_map(&layout);
+    // We push that map into the world, to draw it with `draw_map_system()`
     world.push((map,));
 
-    let mut bacing = Player::default();
+    // Create a player and insert them into the world.
+    let bacing = Player::default();
     world.push((bacing,));
+
     // The main infinite "Input Update Draw" loop.
     loop {
         // ===========Input===========
@@ -107,6 +116,8 @@ async fn main() {
             ..macroquad::Camera2D::default()
         });
 
+        // First draw the map,
+        // Then draw the player.
         schedule.execute(&mut world, &mut resources);
 
         // Draw the mouse cursor.
@@ -125,6 +136,7 @@ async fn main() {
     }
 }
 
+/// A position on the map with associated Tiles kind (e.g. `Tiles::Grass`)
 #[derive(Debug)]
 pub struct Tile {
     pub pos: Vec2,
@@ -136,31 +148,42 @@ impl Tile {
         self.pos = new_pos;
     }
 
-    pub fn pos(&self) -> Vec2 {
+    #[must_use]
+    pub const fn pos(&self) -> Vec2 {
         self.pos
     }
 }
 
+/// Go through the map and drow the tiles with provided TileAtlas.
 #[system(for_each)]
 fn draw_map(tiles: &Vec<Tile>, #[resource] atlas: &TileAtlas) {
     for tile in tiles {
-        atlas.draw_tile(tile.kind, &tile.pos);
+        atlas.draw_tile(tile.kind, tile.pos);
     }
 }
 
+/// Draws the player. Shoul be called after the `draw_map`.
 #[system(for_each)]
 fn draw_player(player: &Player, #[resource] atlas: &TileAtlas) {
     let tile = &player.tile;
-    atlas.draw_tile(tile.kind, &tile.pos);
+    atlas.draw_tile(tile.kind, tile.pos);
 }
 
 /// Render the fixed screen ui. (after `set_default_camera()`)
 fn draw_ui() {
     let text_color: Color = Color([100, 100, 100, 150]);
-    draw_text(",aoe to move camera", 10.0, 0.0, 30.0, text_color);
-    draw_text("' and . to zoom camera", 10.0, 50.0, 30.0, text_color);
+    draw_text(",aoe to move camera", 10.0, 0.0, 20.0, text_color);
+    draw_text("'. to zoom camera", 10.0, 30.0, 20.0, text_color);
+    draw_text(
+        "arrow keys to move the player",
+        10.0,
+        60.0,
+        20.0,
+        text_color,
+    );
 }
 
+/// Handle the keyboard. Move the player.
 fn handle_keyboard(world: &mut World) {
     let mut query = <(&mut Player,)>::query();
 
@@ -180,6 +203,7 @@ fn handle_keyboard(world: &mut World) {
     }
 }
 
+/// Handle the mouse. Print the click position.
 fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {
     if is_mouse_button_down(MouseButton::Left) {
         if !left_mouse_pressed {
@@ -193,6 +217,8 @@ fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {
     }
 }
 
+/// Convert the layout (Tiles vector) into the map (Tile vector).
+#[must_use]
 pub fn generate_map(map: &[Tiles]) -> Vec<Tile> {
     let mut y = 0;
     let mut x = 0;

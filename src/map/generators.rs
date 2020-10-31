@@ -1,11 +1,11 @@
 use crate::map::tiles::Tiles;
-use crate::map::*;
+use crate::map::{position_to_index, Point, Rect};
 use crate::{HEIGHT, WIDTH};
 use rand::prelude::*;
 use std::cmp::{max, min};
 
 /// Generates a map. Randomly placed walls, with screen edges.
-pub fn random_map() -> Vec<Tiles> {
+pub fn _random_map() -> Vec<Tiles> {
     let mut map = vec![Tiles::Grass; (WIDTH * HEIGHT) as usize];
 
     // Make the boundaries walls
@@ -46,12 +46,13 @@ pub fn random_map() -> Vec<Tiles> {
 
 /// Generates a map. Randomly placed walls, with screen edges.
 pub fn rooms_map() -> Vec<Tiles> {
-    let mut map = vec![Tiles::Wall; (WIDTH * HEIGHT) as usize];
-
-    let mut rooms: Vec<Rect> = Vec::new();
     const MAX_ROOMS: i32 = 30;
     const MIN_SIZE: i32 = 3;
     const MAX_SIZE: i32 = 10;
+
+    let mut map = vec![Tiles::Wall; (WIDTH * HEIGHT) as usize];
+
+    let mut rooms: Vec<Rect> = Vec::new();
 
     rooms.push(Rect::new(Point { x: 10, y: 7 }, 4, 4));
 
@@ -79,8 +80,8 @@ pub fn rooms_map() -> Vec<Tiles> {
 
     for room in &rooms {
         apply_room_to_map(room, &mut map);
-        let room2 = rooms.get(rng.gen_range(0, rooms.len())).unwrap();
-        connect_rooms(room, room2, &mut map);
+        let other_room = rooms.get(rng.gen_range(0, rooms.len())).unwrap();
+        connect_rooms(room, other_room, &mut map);
     }
 
     map
@@ -119,6 +120,7 @@ fn apply_horizontal_corridor(starting_point: Point, len: i32, map: &mut [Tiles])
     }
 }
 
+/// Connect a pair of rooms with L shaped corridor.
 fn connect_rooms(room1: &Rect, room2: &Rect, map: &mut [Tiles]) {
     let center1 = room1.center();
     let center2 = room2.center();
