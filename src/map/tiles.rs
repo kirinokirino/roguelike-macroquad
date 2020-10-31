@@ -8,14 +8,14 @@ pub enum Tiles {
 impl Tiles {
     const fn value(&self) -> (f32, f32) {
         match *self {
-            Tiles::Wall => (0., 0.),
-            Tiles::Grass => (1., 0.),
-            Tiles::Pengu => (2., 0.),
+            Self::Wall => (0., 0.),
+            Self::Grass => (1., 0.),
+            Self::Pengu => (2., 0.),
         }
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct TileAtlas {
     texture: Texture2D,
     tile_width: f32,
@@ -23,14 +23,14 @@ pub struct TileAtlas {
 }
 
 impl TileAtlas {
-    pub fn new(texture: Texture2D, tile_width: f32, tile_height: f32) -> Self {
-        TileAtlas {
+    pub const fn new(texture: Texture2D, tile_width: f32, tile_height: f32) -> Self {
+        Self {
             texture,
             tile_width,
             tile_height,
         }
     }
-    pub fn draw_tile(&self, tile: Tiles, pos: Vec2) {
+    pub fn draw_tile(&self, tile: &Tiles, pos: Vec2) {
         let (atlas_x, atlas_y) = tile.value();
         let params = DrawTextureParams {
             dest_size: Some(vec2(1.0, 1.0)),

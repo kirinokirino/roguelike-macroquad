@@ -11,9 +11,8 @@
     clippy::let_underscore_must_use,
     clippy::mem_forget,
     clippy::multiple_inherent_impl,
-    clippy::option_unwrap_used,
     clippy::rest_pat_in_fully_bound_structs,
-    clippy::result_unwrap_used,
+    clippy::unwrap_used,
     clippy::shadow_reuse,
     clippy::shadow_same,
     clippy::string_add,
@@ -23,95 +22,24 @@
 #![allow(
     clippy::missing_docs_in_private_items,
     clippy::unknown_clippy_lints,
-    clippy::option_expect_used,
-    clippy::result_expect_used
+    clippy::expect_used,
+    clippy::future_not_send
 )]
 
-use legion::*;
-use macroquad::*;
+use legion::{Resources, Schedule, World};
+use macroquad::{
+    clear_background, debug, draw_circle, draw_text, is_key_down, is_mouse_button_down,
+    load_texture, next_frame, set_camera, set_default_camera, vec2, warn, Camera2D, Color, KeyCode,
+    MouseButton,
+};
 
 mod map;
 use crate::map::tiles::{TileAtlas, Tiles};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Position {
-    pos: Vec2,
-}
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Camera {
-    target: Vec2,
-    zoom: Vec2,
-}
+mod camera;
+use crate::camera::{relative_mouse_position, Camera};
 
-/// Render the fixed screen ui. (after set_default_camera())
-fn draw_ui() {
-    let text_color: Color = Color([100, 100, 100, 150]);
-    draw_text(",aoe to move camera", 10.0, 0.0, 30.0, text_color);
-    draw_text(
-        "PageUp and PageDown to zoom camera",
-        10.0,
-        50.0,
-        30.0,
-        text_color,
-    );
-}
-
-/// Get and handle the input related to the camera.
-fn move_camera(camera: &mut Camera) {
-    // Move the camera:
-    // UP
-    if is_key_down(KeyCode::Comma) {
-        camera
-            .target
-            .set_y(camera.target.y() + 0.01 / camera.zoom.x())
-    }
-    // DOWN
-    if is_key_down(KeyCode::O) {
-        camera
-            .target
-            .set_y(camera.target.y() - 0.01 / camera.zoom.x())
-    }
-    // LEFT
-    if is_key_down(KeyCode::A) {
-        camera
-            .target
-            .set_x(camera.target.x() - 0.01 / camera.zoom.x())
-    }
-    // RIGHT
-    if is_key_down(KeyCode::E) {
-        camera
-            .target
-            .set_x(camera.target.x() + 0.01 / camera.zoom.x())
-    }
-    // Change the camera zoom:
-    // Further
-    if is_key_down(KeyCode::PageUp) {
-        camera.zoom.set_x(camera.zoom.x() * 0.98);
-        camera.zoom.set_y(camera.zoom.y() * 0.98);
-    }
-    // Closer
-    if is_key_down(KeyCode::PageDown) {
-        camera.zoom.set_x(camera.zoom.x() / 0.98);
-        camera.zoom.set_y(camera.zoom.y() / 0.98);
-    }
-}
-
-/// Get the mouse coordinates inside the game world.
-fn relative_mouse_position(camera: &Camera) -> Vec2 {
-    // Takes the mouse coordinates on window and translates that
-    // to game world coordinates.
-    let mouse = mouse_position();
-    Vec2::new(
-        ((mouse.0 - screen_width() / 2.0) / (screen_width() / 2.0) / camera.zoom.x())
-            + camera.target.x(),
-        ((-mouse.1 + screen_height() / 2.0)
-            / (screen_height() / 2.0)
-            / camera.zoom.x()
-            / (screen_width() / screen_height()))
-            + camera.target.y(),
-    )
-}
-#[macroquad::main("Name")]
+#[macroquad::main("kiriRoguelike")]
 async fn main() {
     // Init world and resources of legion ECS.
     let mut world = World::default();
@@ -127,42 +55,26 @@ async fn main() {
     let atlas = TileAtlas::new(texture, 32., 32.);
     resources.insert(atlas.clone());
 
-    // Main camera.
-    let starting_zoom = 0.05;
-    let mut main_camera = Camera {
-        target: vec2(0.0, 0.0),
-        zoom: vec2(
-            starting_zoom,
-            starting_zoom * screen_width() / screen_height(),
-        ),
-    };
+    // Initialize main camera.
+    let mut main_camera = Camera::default();
 
     // We need to save the state of the mouse button
     // to detect mouse clicks and not just "is pressed"
-    let mut mouse_pressed = false;
+    let mut left_mouse_pressed = false;
 
     // The main infinite "Input Update Draw" loop.
     loop {
         // ===========Input===========
         // Get the mouse position inside the game world.
         let mouse_position = relative_mouse_position(&main_camera);
-        if is_key_down(KeyCode::Right) {}
-        if is_key_down(KeyCode::Left) {}
-        if is_key_down(KeyCode::Down) {}
-        if is_key_down(KeyCode::Up) {}
-        if is_mouse_button_down(MouseButton::Left) {
-            if mouse_pressed == false {
-                let pos = relative_mouse_position(&main_camera);
-                debug!("Mouse click at relative x:{} , y:{}", pos.x(), pos.y())
-            }
-            mouse_pressed = true;
-        } else {
-            mouse_pressed = false;
-        }
+
+        // Player input.
+        left_mouse_pressed = handle_mouse(left_mouse_pressed, main_camera);
+        handle_keyboard();
 
         // ===========Update===========
         // Checks for input related to camera and changes it accordingly.
-        move_camera(&mut main_camera);
+        camera::scroll(&mut main_camera);
 
         // Run initialized systems schedule of legion ECS.
         schedule.execute(&mut world, &mut resources);
@@ -172,14 +84,15 @@ async fn main() {
         clear_background(Color([255, 255, 255, 255]));
 
         // --- Camera space, render game objects.
+        let (target, zoom) = main_camera.get();
         set_camera(Camera2D {
-            target: main_camera.target,
-            zoom: main_camera.zoom,
-            ..Default::default()
+            target,
+            zoom,
+            ..macroquad::Camera2D::default()
         });
 
         // Draw the map.
-        atlas.draw_tile(Tiles::Wall, vec2(0., 0.));
+        atlas.draw_tile(&Tiles::Wall, vec2(0., 0.));
 
         // Draw the mouse cursor.
         draw_circle(
@@ -194,5 +107,37 @@ async fn main() {
         draw_ui();
 
         next_frame().await
+    }
+}
+
+/// Render the fixed screen ui. (after `set_default_camera()`)
+fn draw_ui() {
+    let text_color: Color = Color([100, 100, 100, 150]);
+    draw_text(",aoe to move camera", 10.0, 0.0, 30.0, text_color);
+    draw_text(
+        "PageUp and PageDown to zoom camera",
+        10.0,
+        50.0,
+        30.0,
+        text_color,
+    );
+}
+
+fn handle_keyboard() {
+    if is_key_down(KeyCode::Right) {}
+    if is_key_down(KeyCode::Left) {}
+    if is_key_down(KeyCode::Down) {}
+    if is_key_down(KeyCode::Up) {}
+}
+
+fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {
+    if is_mouse_button_down(MouseButton::Left) {
+        if !left_mouse_pressed {
+            let pos = relative_mouse_position(&main_camera);
+            debug!("Mouse click at relative x:{} , y:{}", pos.x(), pos.y())
+        }
+        true
+    } else {
+        false
     }
 }

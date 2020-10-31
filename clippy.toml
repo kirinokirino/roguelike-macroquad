@@ -44,7 +44,7 @@ literal-representation-threshold = 16384
 # Lint: TRIVIALLY-COPY-PASS-BY-REF. The maximum size (in bytes) to consider a `Copy` type for passing by value instead of by reference.
 trivial-copy-size-limit = 8
 # Lint: TOO-MANY-LINES. The maximum number of lines a function or method can have
-too-many-lines-threshold = 20 #100
+too-many-lines-threshold = 100
 # Lint: LARGE-STACK-ARRAYS. The maximum allowed size for arrays on the stack
 array-size-threshold = 512000
 # Lint: VEC-BOX. The size of the boxed type in bytes, where boxing in a `Vec` is allowed
