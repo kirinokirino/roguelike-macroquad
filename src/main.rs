@@ -26,22 +26,25 @@
     clippy::future_not_send
 )]
 
-use legion::{system, Resources, Schedule, World};
+use legion::*;
 use macroquad::{
-    clear_background, debug, draw_circle, draw_text, is_key_down, is_mouse_button_down,
-    load_texture, next_frame, set_camera, set_default_camera, vec2, warn, Camera2D, Color, KeyCode,
-    MouseButton, Vec2,
+    clear_background, debug, draw_circle, draw_text, is_key_down, is_key_pressed,
+    is_mouse_button_down, load_texture, next_frame, set_camera, set_default_camera, vec2, warn,
+    Camera2D, Color, KeyCode, MouseButton, Vec2,
 };
 
 mod map;
-use crate::map::generators::random_map;
+use crate::map::generators::{random_map, rooms_map};
 use crate::map::tiles::{TileAtlas, Tiles};
 
 mod camera;
 use crate::camera::{relative_mouse_position, Camera};
 
-pub const WIDTH: i32 = 40;
-pub const HEIGHT: i32 = 25;
+mod characters;
+use crate::characters::player::Player;
+
+pub const WIDTH: i32 = 75;
+pub const HEIGHT: i32 = 75;
 
 #[macroquad::main("kiriRoguelike")]
 async fn main() {
@@ -50,7 +53,10 @@ async fn main() {
     let mut resources = Resources::default();
 
     // Construct a systems schedule of legion ECS.
-    let mut schedule = Schedule::builder().add_system(draw_map_system()).build();
+    let mut schedule = Schedule::builder()
+        .add_system(draw_map_system())
+        .add_system(draw_player_system())
+        .build();
 
     // Load assets.
     let texture = load_texture("assets/Tiles.png").await;
@@ -66,9 +72,12 @@ async fn main() {
     // to detect mouse clicks and not just "is pressed"
     let mut left_mouse_pressed = false;
 
-    let weirdness = random_map();
+    let weirdness = rooms_map();
     let map = generate_map(&weirdness);
     world.push((map,));
+
+    let mut bacing = Player::default();
+    world.push((bacing,));
     // The main infinite "Input Update Draw" loop.
     loop {
         // ===========Input===========
@@ -77,7 +86,7 @@ async fn main() {
 
         // Player input.
         left_mouse_pressed = handle_mouse(left_mouse_pressed, main_camera);
-        handle_keyboard();
+        handle_keyboard(&mut world);
 
         // ===========Update===========
         // Checks for input related to camera and changes it accordingly.
@@ -122,6 +131,16 @@ pub struct Tile {
     pub kind: Tiles,
 }
 
+impl Tile {
+    pub fn new_pos(&mut self, new_pos: Vec2) {
+        self.pos = new_pos;
+    }
+
+    pub fn pos(&self) -> Vec2 {
+        self.pos
+    }
+}
+
 #[system(for_each)]
 fn draw_map(tiles: &Vec<Tile>, #[resource] atlas: &TileAtlas) {
     for tile in tiles {
@@ -129,24 +148,36 @@ fn draw_map(tiles: &Vec<Tile>, #[resource] atlas: &TileAtlas) {
     }
 }
 
+#[system(for_each)]
+fn draw_player(player: &Player, #[resource] atlas: &TileAtlas) {
+    let tile = &player.tile;
+    atlas.draw_tile(tile.kind, &tile.pos);
+}
+
 /// Render the fixed screen ui. (after `set_default_camera()`)
 fn draw_ui() {
     let text_color: Color = Color([100, 100, 100, 150]);
     draw_text(",aoe to move camera", 10.0, 0.0, 30.0, text_color);
-    draw_text(
-        "PageUp and PageDown to zoom camera",
-        10.0,
-        50.0,
-        30.0,
-        text_color,
-    );
+    draw_text("' and . to zoom camera", 10.0, 50.0, 30.0, text_color);
 }
 
-fn handle_keyboard() {
-    if is_key_down(KeyCode::Right) {}
-    if is_key_down(KeyCode::Left) {}
-    if is_key_down(KeyCode::Down) {}
-    if is_key_down(KeyCode::Up) {}
+fn handle_keyboard(world: &mut World) {
+    let mut query = <(&mut Player,)>::query();
+
+    for (bacing,) in query.iter_mut(world) {
+        if is_key_pressed(KeyCode::Right) {
+            bacing.walk(vec2(1., 0.));
+        }
+        if is_key_pressed(KeyCode::Left) {
+            bacing.walk(vec2(-1., 0.));
+        }
+        if is_key_pressed(KeyCode::Down) {
+            bacing.walk(vec2(0., -1.));
+        }
+        if is_key_pressed(KeyCode::Up) {
+            bacing.walk(vec2(0., 1.));
+        }
+    }
 }
 
 fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {

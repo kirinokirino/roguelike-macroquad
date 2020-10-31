@@ -70,12 +70,12 @@ pub fn scroll(camera: &mut Camera) {
     }
     // Change the camera zoom:
     // Further
-    if is_key_down(KeyCode::PageUp) {
+    if is_key_down(KeyCode::Apostrophe) {
         camera.zoom.set_x(camera.zoom.x() * 0.98);
         camera.zoom.set_y(camera.zoom.y() * 0.98);
     }
     // Closer
-    if is_key_down(KeyCode::PageDown) {
+    if is_key_down(KeyCode::Period) {
         camera.zoom.set_x(camera.zoom.x() / 0.98);
         camera.zoom.set_y(camera.zoom.y() / 0.98);
     }

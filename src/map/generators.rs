@@ -1,9 +1,8 @@
 use crate::map::tiles::Tiles;
-use rand::prelude::*;
-use std::cmp::{max, min};
-
 use crate::map::*;
 use crate::{HEIGHT, WIDTH};
+use rand::prelude::*;
+use std::cmp::{max, min};
 
 /// Generates a map. Randomly placed walls, with screen edges.
 pub fn random_map() -> Vec<Tiles> {
@@ -50,7 +49,7 @@ pub fn rooms_map() -> Vec<Tiles> {
     let mut map = vec![Tiles::Wall; (WIDTH * HEIGHT) as usize];
 
     let mut rooms: Vec<Rect> = Vec::new();
-    const MAX_ROOMS: i32 = 20;
+    const MAX_ROOMS: i32 = 30;
     const MIN_SIZE: i32 = 3;
     const MAX_SIZE: i32 = 10;
 
