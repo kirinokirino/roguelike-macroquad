@@ -1,10 +1,12 @@
 use macroquad::error;
 use std::fs;
 use std::io::Error;
+
 // Default values in case there is no config file found.
 const WIDTH: i32 = 40;
 const HEIGHT: i32 = 40;
 
+/// Split the key=value pair into tuple of strings
 fn parse_pair(line: &str) -> (String, String) {
     let mut iter = line.splitn(2, '=');
     let key = iter.next().expect("parse_pair failed");
@@ -12,7 +14,7 @@ fn parse_pair(line: &str) -> (String, String) {
     (key.to_string(), value.to_string())
 }
 struct ConfigFile {
-    path: String,
+    _path: String,
     vars: Vec<(String, String)>,
 }
 
@@ -24,18 +26,21 @@ impl ConfigFile {
             vars.push(parse_pair(line));
         }
         Ok(Self {
-            path: path.to_string(),
+            _path: path.to_string(),
             vars,
         })
     }
 }
+
+// Centralized struct for all customizable variables.
 pub struct Settings {
-    file: Option<ConfigFile>,
+    _config: Option<ConfigFile>,
     pub width: i32,
     pub height: i32,
 }
 
 impl Settings {
+    /// Try to read settings file and populate `Settings` struct, provide defaults otherwise.
     pub fn init(path: &str) -> Self {
         match ConfigFile::new(path) {
             Ok(config) => {
@@ -70,7 +75,7 @@ impl Settings {
             }
         }
         Self {
-            file: Some(config),
+            _config: Some(config),
             width,
             height,
         }
@@ -80,7 +85,7 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            file: None,
+            _config: None,
             width: WIDTH,
             height: HEIGHT,
         }

@@ -34,7 +34,7 @@ use macroquad::{
 };
 
 mod map;
-use crate::map::generators::_random_map;
+use crate::map::generators::rooms_map;
 use crate::map::tiles::{Tile, TileAtlas};
 
 mod camera;
@@ -83,7 +83,7 @@ async fn main() {
         "generating the map with {} by {} size",
         settings.width, settings.height
     );
-    let map = _random_map(settings.width, settings.height);
+    let map = rooms_map(settings.width, settings.height);
     // We push that map into the world, to draw it with `draw_map_system()`
     world.push((map,));
 
