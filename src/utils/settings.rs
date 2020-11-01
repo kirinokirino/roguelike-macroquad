@@ -5,6 +5,8 @@ use std::io::Error;
 // Default values in case there is no config file found.
 const WIDTH: i32 = 40;
 const HEIGHT: i32 = 40;
+const ZOOM_SPEED: f32 = 0.98;
+const SCROLL_SPEED: f32 = 0.02;
 
 /// Split the key=value pair into tuple of strings
 fn parse_pair(line: &str) -> (String, String) {
@@ -37,6 +39,8 @@ pub struct Settings {
     _config: Option<ConfigFile>,
     pub width: i32,
     pub height: i32,
+    pub scroll_speed: f32,
+    pub zoom_speed: f32,
 }
 
 impl Settings {
@@ -59,6 +63,8 @@ impl Settings {
     fn parse_config(config: ConfigFile) -> Self {
         let mut width = WIDTH;
         let mut height = HEIGHT;
+        let mut scroll_speed = SCROLL_SPEED;
+        let mut zoom_speed = ZOOM_SPEED;
         for (key, value) in &config.vars {
             match key.as_str() {
                 "width" => {
@@ -71,6 +77,16 @@ impl Settings {
                         .parse::<i32>()
                         .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
                 }
+                "scroll_speed" => {
+                    scroll_speed = value
+                        .parse::<f32>()
+                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                }
+                "zoom_speed" => {
+                    zoom_speed = value
+                        .parse::<f32>()
+                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                }
                 _ => error!("unknown key {}", key),
             }
         }
@@ -78,6 +94,8 @@ impl Settings {
             _config: Some(config),
             width,
             height,
+            scroll_speed,
+            zoom_speed,
         }
     }
 }
@@ -88,6 +106,8 @@ impl Default for Settings {
             _config: None,
             width: WIDTH,
             height: HEIGHT,
+            scroll_speed: SCROLL_SPEED,
+            zoom_speed: ZOOM_SPEED,
         }
     }
 }

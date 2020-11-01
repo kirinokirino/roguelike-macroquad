@@ -1,7 +1,5 @@
 use macroquad::{is_key_down, mouse_position, screen_height, screen_width, vec2, KeyCode, Vec2};
 
-const SCROLL_SPEED: f32 = 0.02;
-const ZOOM_SPEED: f32 = 0.98;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Camera {
     target: Vec2,
@@ -44,41 +42,41 @@ pub fn relative_mouse_position(camera: &Camera) -> Vec2 {
 }
 
 /// Get and handle the input related to the camera.
-pub fn scroll(camera: &mut Camera) {
+pub fn scroll(camera: &mut Camera, scroll_speed: f32, zoom_speed: f32) {
     // Move the camera:
     // UP
     if is_key_down(KeyCode::Comma) {
         camera
             .target
-            .set_y(camera.target.y() + SCROLL_SPEED / camera.zoom.x())
+            .set_y(camera.target.y() + scroll_speed / camera.zoom.x())
     }
     // DOWN
     if is_key_down(KeyCode::O) {
         camera
             .target
-            .set_y(camera.target.y() - SCROLL_SPEED / camera.zoom.x())
+            .set_y(camera.target.y() - scroll_speed / camera.zoom.x())
     }
     // LEFT
     if is_key_down(KeyCode::A) {
         camera
             .target
-            .set_x(camera.target.x() - SCROLL_SPEED / camera.zoom.x())
+            .set_x(camera.target.x() - scroll_speed / camera.zoom.x())
     }
     // RIGHT
     if is_key_down(KeyCode::E) {
         camera
             .target
-            .set_x(camera.target.x() + SCROLL_SPEED / camera.zoom.x())
+            .set_x(camera.target.x() + scroll_speed / camera.zoom.x())
     }
     // Change the camera zoom:
     // Further
     if is_key_down(KeyCode::Apostrophe) {
-        camera.zoom.set_x(camera.zoom.x() * ZOOM_SPEED);
-        camera.zoom.set_y(camera.zoom.y() * ZOOM_SPEED);
+        camera.zoom.set_x(camera.zoom.x() * zoom_speed);
+        camera.zoom.set_y(camera.zoom.y() * zoom_speed);
     }
     // Closer
     if is_key_down(KeyCode::Period) {
-        camera.zoom.set_x(camera.zoom.x() / ZOOM_SPEED);
-        camera.zoom.set_y(camera.zoom.y() / ZOOM_SPEED);
+        camera.zoom.set_x(camera.zoom.x() / zoom_speed);
+        camera.zoom.set_y(camera.zoom.y() / zoom_speed);
     }
 }

@@ -37,14 +37,12 @@ mod map;
 use crate::map::generators::rooms_map;
 use crate::map::tiles::{Tile, TileAtlas};
 
-mod camera;
-use crate::camera::{relative_mouse_position, Camera};
-
 mod characters;
 use crate::characters::player::Player;
 
 mod utils;
 use utils::settings::Settings;
+use utils::{camera, camera::relative_mouse_position, camera::Camera};
 
 #[macroquad::main("kiriRoguelike")]
 async fn main() {
@@ -103,7 +101,7 @@ async fn main() {
 
         // ===========Update===========
         // Checks for input related to camera and changes it accordingly.
-        camera::scroll(&mut main_camera);
+        camera::scroll(&mut main_camera, settings.scroll_speed, settings.zoom_speed);
 
         // Run initialized systems schedule of legion ECS.
         schedule.execute(&mut world, &mut resources);
