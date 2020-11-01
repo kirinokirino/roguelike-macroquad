@@ -1,28 +1,36 @@
-use crate::map::tiles::Tiles;
+use crate::map::tiles::{Tile, Tiles};
 use crate::map::{position_to_index, Point, Rect};
-use crate::{HEIGHT, WIDTH};
+use macroquad::vec2;
 use rand::prelude::*;
 use std::cmp::{max, min};
 
 /// Generates a map. Randomly placed walls, with screen edges.
-pub fn _random_map() -> Vec<Tiles> {
-    let mut map = vec![Tiles::Grass; (WIDTH * HEIGHT) as usize];
-
-    // Make the boundaries walls
-    for x in 0..WIDTH {
-        if let Some(tile) = map.get_mut(position_to_index(x, 0)) {
-            *tile = Tiles::Wall;
-        }
-        if let Some(tile) = map.get_mut(position_to_index(x, HEIGHT - 1)) {
-            *tile = Tiles::Wall;
+pub fn _random_map(width: i32, height: i32) -> Vec<Tile> {
+    let mut map = Vec::with_capacity((width * height) as usize);
+    for x in 0..width {
+        for y in 0..height {
+            map.push(Tile {
+                pos: vec2(x as f32, y as f32),
+                kind: Tiles::Grass,
+            })
         }
     }
-    for y in 0..HEIGHT {
-        if let Some(tile) = map.get_mut(position_to_index(0, y)) {
-            *tile = Tiles::Wall;
+
+    // Make the boundaries walls
+    for x in 0..width {
+        if let Some(tile) = map.get_mut(position_to_index(x, 0, width)) {
+            tile.kind = Tiles::Wall;
         }
-        if let Some(tile) = map.get_mut(position_to_index(WIDTH - 1, y)) {
-            *tile = Tiles::Wall;
+        if let Some(tile) = map.get_mut(position_to_index(x, height - 1, width)) {
+            tile.kind = Tiles::Wall;
+        }
+    }
+    for y in 0..height {
+        if let Some(tile) = map.get_mut(position_to_index(0, y, width)) {
+            tile.kind = Tiles::Wall;
+        }
+        if let Some(tile) = map.get_mut(position_to_index(width - 1, y, width)) {
+            tile.kind = Tiles::Wall;
         }
     }
 
@@ -31,41 +39,36 @@ pub fn _random_map() -> Vec<Tiles> {
     let mut rng = rand::thread_rng();
 
     for _i in 0..200 {
-        let x = rng.gen_range(0, WIDTH - 1);
-        let y = rng.gen_range(0, HEIGHT - 1);
-        let index = position_to_index(x, y);
-        if index != position_to_index(WIDTH / 2, HEIGHT / 2) {
-            if let Some(place) = map.get_mut(index) {
-                *place = Tiles::Wall;
-            }
+        let x = rng.gen_range(0, width - 1);
+        let y = rng.gen_range(0, height - 1);
+        let index = position_to_index(x, y, width);
+        if let Some(tile) = map.get_mut(index) {
+            tile.kind = Tiles::Wall;
         }
     }
 
     map
 }
 
+/*
 /// Generates a map. Randomly placed walls, with screen edges.
-pub fn rooms_map() -> Vec<Tiles> {
+pub fn rooms_map(width: i32, height: i32) -> Vec<Tiles> {
     const MAX_ROOMS: i32 = 30;
     const MIN_SIZE: i32 = 3;
     const MAX_SIZE: i32 = 10;
 
-    let mut map = vec![Tiles::Wall; (WIDTH * HEIGHT) as usize];
+    let mut map = vec![Tiles::Wall; (width * height) as usize];
 
     let mut rooms: Vec<Rect> = Vec::new();
-
-    rooms.push(Rect::new(Point { x: 10, y: 7 }, 4, 4));
-
-    rooms.push(Rect::new(Point { x: 20, y: 17 }, 4, 4));
 
     let mut rng = rand::thread_rng();
 
     for _ in 0..MAX_ROOMS {
-        let width = rng.gen_range(MIN_SIZE, MAX_SIZE);
-        let height = rng.gen_range(MIN_SIZE, MAX_SIZE);
-        let x = rng.gen_range(0, WIDTH - width - 1) - 1;
-        let y = rng.gen_range(0, HEIGHT - height - 1) - 1;
-        let new_room = Rect::new(Point { x, y }, width, height);
+        let room_width = rng.gen_range(MIN_SIZE, MAX_SIZE);
+        let room_height = rng.gen_range(MIN_SIZE, MAX_SIZE);
+        let x = rng.gen_range(0, height - room_height - 1) - 1;
+        let y = rng.gen_range(0, width - room_width - 1) - 1;
+        let new_room = Rect::new(Point { x, y }, room_width, room_height);
 
         let mut ok = true;
         for other_room in rooms.iter() {
@@ -127,3 +130,4 @@ fn connect_rooms(room1: &Rect, room2: &Rect, map: &mut [Tiles]) {
     apply_horizontal_corridor(center1, center2.x - center1.x, map);
     apply_vertical_corridor(center2, center1.y - center2.y, map)
 }
+*/

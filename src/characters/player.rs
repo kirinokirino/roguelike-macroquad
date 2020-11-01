@@ -1,5 +1,4 @@
-use crate::map::tiles::Tiles;
-use crate::Tile;
+use crate::map::tiles::{Tile, Tiles};
 use macroquad::Vec2;
 
 #[derive(Debug)]

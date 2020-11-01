@@ -1,10 +1,8 @@
 pub mod generators;
 pub mod tiles;
 
-use crate::WIDTH;
-
-pub const fn position_to_index(x: i32, y: i32) -> usize {
-    ((y * WIDTH) + x) as usize
+pub const fn position_to_index(x: i32, y: i32, width: i32) -> usize {
+    ((y * width) + x) as usize
 }
 
 #[derive(Debug, Copy, Clone)]

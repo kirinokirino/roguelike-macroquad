@@ -30,12 +30,12 @@ use legion::{system, IntoQuery, Resources, Schedule, World};
 use macroquad::{
     clear_background, debug, draw_circle, draw_text, is_key_pressed, is_mouse_button_down,
     load_texture, next_frame, set_camera, set_default_camera, vec2, warn, Camera2D, Color, KeyCode,
-    MouseButton, Vec2,
+    MouseButton,
 };
 
 mod map;
-use crate::map::generators::rooms_map;
-use crate::map::tiles::{TileAtlas, Tiles};
+use crate::map::generators::_random_map;
+use crate::map::tiles::{Tile, TileAtlas};
 
 mod camera;
 use crate::camera::{relative_mouse_position, Camera};
@@ -43,11 +43,14 @@ use crate::camera::{relative_mouse_position, Camera};
 mod characters;
 use crate::characters::player::Player;
 
-pub const WIDTH: i32 = 75;
-pub const HEIGHT: i32 = 75;
+mod utils;
+use utils::settings::Settings;
 
 #[macroquad::main("kiriRoguelike")]
 async fn main() {
+    // Load settings file.
+    let settings = Settings::init("Settings.config");
+
     // Init world and resources of legion ECS.
     let mut world = World::default();
     let mut resources = Resources::default();
@@ -76,10 +79,11 @@ async fn main() {
     // Tile is a concrete struct with associated map coordinates.
     // `rooms_map()` is a generator that provides a layout. (There are
     // different types of generators)
-    let layout = rooms_map();
-    // `generate_map()` takes that layout and transforms it into
-    // a vector of tiles.
-    let map = generate_map(&layout);
+    println!(
+        "generating the map with {} by {} size",
+        settings.width, settings.height
+    );
+    let map = _random_map(settings.width, settings.height);
     // We push that map into the world, to draw it with `draw_map_system()`
     world.push((map,));
 
@@ -133,24 +137,6 @@ async fn main() {
         draw_ui();
 
         next_frame().await
-    }
-}
-
-/// A position on the map with associated Tiles kind (e.g. `Tiles::Grass`)
-#[derive(Debug)]
-pub struct Tile {
-    pub pos: Vec2,
-    pub kind: Tiles,
-}
-
-impl Tile {
-    pub fn new_pos(&mut self, new_pos: Vec2) {
-        self.pos = new_pos;
-    }
-
-    #[must_use]
-    pub const fn pos(&self) -> Vec2 {
-        self.pos
     }
 }
 
@@ -215,37 +201,4 @@ fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {
     } else {
         false
     }
-}
-
-/// Convert the layout (Tiles vector) into the map (Tile vector).
-#[must_use]
-pub fn generate_map(map: &[Tiles]) -> Vec<Tile> {
-    let mut y = 0;
-    let mut x = 0;
-    let mut res: Vec<Tile> = Vec::with_capacity((WIDTH * HEIGHT) as usize);
-    for tile in map.iter() {
-        // Render a tile depending upon the tile type
-        match tile {
-            Tiles::Grass => res.push(Tile {
-                pos: vec2(x as f32, y as f32),
-                kind: Tiles::Grass,
-            }),
-            Tiles::Wall => res.push(Tile {
-                pos: vec2(x as f32, y as f32),
-                kind: Tiles::Wall,
-            }),
-            Tiles::Pengu => res.push(Tile {
-                pos: vec2(x as f32, y as f32),
-                kind: Tiles::Pengu,
-            }),
-        }
-
-        // Move the coordinates
-        x += 1;
-        if x > WIDTH - 1 {
-            x = 0;
-            y += 1;
-        }
-    }
-    res
 }

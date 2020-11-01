@@ -52,3 +52,33 @@ impl TileAtlas {
         draw_texture_ex(self.texture, pos.x(), pos.y(), WHITE, params);
     }
 }
+/// A position on the map with associated Tiles kind (e.g. `Tiles::Grass`)
+#[derive(Debug, Clone)]
+pub struct Tile {
+    pub pos: Vec2,
+    pub kind: Tiles,
+}
+
+impl Tile {
+    pub fn new(kind: Tiles, pos: Vec2) -> Self {
+        Self { pos, kind }
+    }
+
+    pub fn new_pos(&mut self, new_pos: Vec2) {
+        self.pos = new_pos;
+    }
+
+    #[must_use]
+    pub const fn pos(&self) -> Vec2 {
+        self.pos
+    }
+}
+
+impl Default for Tile {
+    fn default() -> Self {
+        Self {
+            pos: Vec2::zero(),
+            kind: Tiles::Wall,
+        }
+    }
+}
