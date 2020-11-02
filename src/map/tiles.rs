@@ -1,19 +1,25 @@
 use macroquad::{draw_texture_ex, vec2, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
-
 /// Available kinds of Tiles. `value()` is their position on the `TileAtlas`.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Tiles {
+pub enum Tile {
     Wall,
     Grass,
     Pengu,
 }
 
-impl Tiles {
+impl Tile {
     const fn value(self) -> (f32, f32) {
         match self {
             Self::Wall => (0., 0.),
             Self::Grass => (1., 0.),
             Self::Pengu => (2., 0.),
+        }
+    }
+    const fn is_walkable(self) -> bool {
+        match self {
+            Self::Wall => false,
+            Self::Grass => true,
+            Self::Pengu => false,
         }
     }
 }
@@ -37,48 +43,29 @@ impl TileAtlas {
     }
 
     /// Draw provided Tiles kind (e.g. `Tiles::Grass`) to the given position.
-    pub fn draw_tile(&self, tile: Tiles, pos: Vec2) {
-        let (atlas_x, atlas_y) = tile.value();
+    pub fn draw_tile(&self, tile: &Tile, pos: &Position) {
+        let (atlas_position_x, atlas_position_y) = tile.value();
         let params = DrawTextureParams {
-            dest_size: Some(vec2(1.0, 1.0)),
-            source: Some(Rect::new(
-                self.tile_width * atlas_x,
-                self.tile_height * atlas_y,
-                self.tile_width,
-                self.tile_height,
-            )),
+            dest_size: Some(Vec2::one()),
+            source: Some(Rect {
+                x: self.tile_width * atlas_position_x,
+                y: self.tile_height * atlas_position_y,
+                w: self.tile_width,
+                h: self.tile_height,
+            }),
             rotation: std::f32::consts::PI,
         };
-        draw_texture_ex(self.texture, pos.x(), pos.y(), WHITE, params);
+        draw_texture_ex(self.texture, pos.x as f32, pos.y as f32, WHITE, params);
     }
 }
-/// A position on the map with associated Tiles kind (e.g. `Tiles::Grass`)
-#[derive(Debug, Clone)]
-pub struct Tile {
-    pub pos: Vec2,
-    pub kind: Tiles,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Position {
+    pub x: i32,
+    pub y: i32,
 }
 
-impl Tile {
-    pub fn new(kind: Tiles, pos: Vec2) -> Self {
-        Self { pos, kind }
-    }
-
-    pub fn new_pos(&mut self, new_pos: Vec2) {
-        self.pos = new_pos;
-    }
-
-    #[must_use]
-    pub const fn pos(&self) -> Vec2 {
-        self.pos
-    }
-}
-
-impl Default for Tile {
-    fn default() -> Self {
-        Self {
-            pos: Vec2::zero(),
-            kind: Tiles::Wall,
-        }
-    }
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct AtlasPosition {
+    x: f32,
+    y: f32,
 }

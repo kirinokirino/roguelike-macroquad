@@ -34,11 +34,11 @@ use macroquad::{
 };
 
 mod map;
-use crate::map::generators::rooms_map;
-use crate::map::tiles::{Tile, TileAtlas};
+use crate::map::generators::_random_map;
+use crate::map::tiles::{Position, Tile, TileAtlas};
 
 mod characters;
-use crate::characters::player::Player;
+use crate::characters::player::{IsPlayer, Mover};
 
 mod utils;
 use utils::settings::Settings;
@@ -78,16 +78,20 @@ async fn main() {
     // `rooms_map()` is a generator that provides a layout. (There are
     // different types of generators)
     println!(
-        "generating the map with {} by {} size",
+        "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let map = rooms_map(settings.width, settings.height);
+    let map = _random_map(settings.width, settings.height);
     // We push that map into the world, to draw it with `draw_map_system()`
-    world.push((map,));
+    world.extend(map);
 
-    // Create a player and insert them into the world.
-    let bacing = Player::default();
-    world.push((bacing,));
+    // Insert the player into the world.
+    world.push((
+        Tile::Pengu,
+        Position { x: 1, y: 1 },
+        IsPlayer {},
+        Mover { x: 0, y: 0 },
+    ));
 
     // The main infinite "Input Update Draw" loop.
     loop {
@@ -103,9 +107,6 @@ async fn main() {
         // Checks for input related to camera and changes it accordingly.
         camera::scroll(&mut main_camera, settings.scroll_speed, settings.zoom_speed);
 
-        // Run initialized systems schedule of legion ECS.
-        schedule.execute(&mut world, &mut resources);
-
         // ===========Draw===========
         // Fill the canvas with white.
         clear_background(Color([255, 255, 255, 255]));
@@ -118,8 +119,7 @@ async fn main() {
             ..macroquad::Camera2D::default()
         });
 
-        // First draw the map,
-        // Then draw the player.
+        // ECS systems executions.
         schedule.execute(&mut world, &mut resources);
 
         // Draw the mouse cursor.
@@ -140,17 +140,14 @@ async fn main() {
 
 /// Go through the map and drow the tiles with provided TileAtlas.
 #[system(for_each)]
-fn draw_map(tiles: &Vec<Tile>, #[resource] atlas: &TileAtlas) {
-    for tile in tiles {
-        atlas.draw_tile(tile.kind, tile.pos);
-    }
+fn draw_map(tile: &Tile, pos: &Position, #[resource] atlas: &TileAtlas) {
+    atlas.draw_tile(tile, pos);
 }
 
 /// Draws the player. Shoul be called after the `draw_map`.
 #[system(for_each)]
-fn draw_player(player: &Player, #[resource] atlas: &TileAtlas) {
-    let tile = &player.tile;
-    atlas.draw_tile(tile.kind, tile.pos);
+fn draw_player(player: &IsPlayer, tile: &Tile, pos: &Position, #[resource] atlas: &TileAtlas) {
+    atlas.draw_tile(tile, pos);
 }
 
 /// Render the fixed screen ui. (after `set_default_camera()`)
@@ -169,20 +166,20 @@ fn draw_ui() {
 
 /// Handle the keyboard. Move the player.
 fn handle_keyboard(world: &mut World) {
-    let mut query = <(&mut Player,)>::query();
+    let mut query = <(&IsPlayer, &mut Mover)>::query();
 
-    for (bacing,) in query.iter_mut(world) {
+    for (_, bacing) in query.iter_mut(world) {
         if is_key_pressed(KeyCode::Right) {
-            bacing.walk(vec2(1., 0.));
+            bacing.try_move((1, 0));
         }
         if is_key_pressed(KeyCode::Left) {
-            bacing.walk(vec2(-1., 0.));
+            bacing.try_move((-1, 0));
         }
         if is_key_pressed(KeyCode::Down) {
-            bacing.walk(vec2(0., -1.));
+            bacing.try_move((0, -1));
         }
         if is_key_pressed(KeyCode::Up) {
-            bacing.walk(vec2(0., 1.));
+            bacing.try_move((0, 1));
         }
     }
 }

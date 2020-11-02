@@ -1,36 +1,32 @@
-use crate::map::tiles::{Tile, Tiles};
+use crate::map::tiles::{Position, Tile};
 use crate::map::{position_to_index, Point, Rect};
-use macroquad::vec2;
 use rand::prelude::*;
 use std::cmp::{max, min};
 
 /// Generates a map. Randomly placed walls, with screen edges.
-pub fn _random_map(width: i32, height: i32) -> Vec<Tile> {
+pub fn _random_map(width: i32, height: i32) -> Vec<(Tile, Position)> {
     let mut map = Vec::with_capacity((width * height) as usize);
     for x in 0..width {
         for y in 0..height {
-            map.push(Tile {
-                pos: vec2(x as f32, y as f32),
-                kind: Tiles::Grass,
-            })
+            map.push((Tile::Grass, Position { x, y }));
         }
     }
 
     // Make the boundaries walls
     for x in 0..width {
         if let Some(tile) = map.get_mut(position_to_index(x, 0, width)) {
-            tile.kind = Tiles::Wall;
+            tile.0 = Tile::Wall;
         }
         if let Some(tile) = map.get_mut(position_to_index(x, height - 1, width)) {
-            tile.kind = Tiles::Wall;
+            tile.0 = Tile::Wall;
         }
     }
     for y in 0..height {
         if let Some(tile) = map.get_mut(position_to_index(0, y, width)) {
-            tile.kind = Tiles::Wall;
+            tile.0 = Tile::Wall;
         }
         if let Some(tile) = map.get_mut(position_to_index(width - 1, y, width)) {
-            tile.kind = Tiles::Wall;
+            tile.0 = Tile::Wall;
         }
     }
 
@@ -43,13 +39,14 @@ pub fn _random_map(width: i32, height: i32) -> Vec<Tile> {
         let y = rng.gen_range(0, height - 1);
         let index = position_to_index(x, y, width);
         if let Some(tile) = map.get_mut(index) {
-            tile.kind = Tiles::Wall;
+            tile.0 = Tile::Wall;
         }
     }
 
     map
 }
 
+/*
 /// Generates a map. Randomly placed walls, with screen edges.
 pub fn rooms_map(width: i32, height: i32) -> Vec<Tile> {
     const MAX_ROOMS: i32 = 30;
@@ -59,10 +56,7 @@ pub fn rooms_map(width: i32, height: i32) -> Vec<Tile> {
     let mut map = Vec::with_capacity((width * height) as usize);
     for x in 0..width {
         for y in 0..height {
-            map.push(Tile {
-                pos: vec2(x as f32, y as f32),
-                kind: Tiles::Wall,
-            })
+            map.push(Tile::new(Tile::Wall, (x, y)))
         }
     }
 
@@ -101,7 +95,7 @@ fn apply_room_to_map(room: &Rect, map: &mut [Tile], width: i32) {
     for y in (room.top_left.y + 1)..=room.down_right.y {
         for x in (room.top_left.x + 1)..=room.down_right.x {
             if let Some(tile) = map.get_mut(position_to_index(x, y, width)) {
-                tile.kind = Tiles::Grass;
+                tile.kind = Tile::Grass;
             }
         }
     }
@@ -113,7 +107,7 @@ fn apply_vertical_corridor(starting_point: Point, len: i32, map: &mut [Tile], wi
         let index = position_to_index(x, target_y, width);
 
         if let Some(tile) = map.get_mut(index) {
-            tile.kind = Tiles::Grass;
+            tile.kind = Tile::Grass;
         }
     }
 }
@@ -124,7 +118,7 @@ fn apply_horizontal_corridor(starting_point: Point, len: i32, map: &mut [Tile], 
         let index = position_to_index(target_x, y, width);
 
         if let Some(tile) = map.get_mut(index) {
-            tile.kind = Tiles::Grass;
+            tile.kind = Tile::Grass;
         }
     }
 }
@@ -136,3 +130,4 @@ fn connect_rooms(room1: &Rect, room2: &Rect, map: &mut [Tile], width: i32) {
     apply_horizontal_corridor(center1, center2.x - center1.x, map, width);
     apply_vertical_corridor(center2, center1.y - center2.y, map, width)
 }
+*/
