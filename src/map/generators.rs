@@ -1,46 +1,33 @@
-use crate::map::tiles::{Position, Tile};
-use crate::map::{position_to_index, Point, Rect};
-use rand::prelude::*;
-use std::cmp::{max, min};
+use crate::map::tiles::Tile;
+use fastrand::Rng;
 
 /// Generates a map. Randomly placed walls, with screen edges.
-pub fn _random_map(width: i32, height: i32) -> Vec<(Tile, Position)> {
-    let mut map = Vec::with_capacity((width * height) as usize);
+pub fn _random_map(width: usize, height: usize, num_walls: i32) -> Vec<Vec<Tile>> {
+    let mut map = vec![vec![Tile::Grass; width]; height];
     for x in 0..width {
         for y in 0..height {
-            map.push((Tile::Grass, Position { x, y }));
+            map[x as usize][y as usize] = Tile::Grass;
         }
     }
 
     // Make the boundaries walls
     for x in 0..width {
-        if let Some(tile) = map.get_mut(position_to_index(x, 0, width)) {
-            tile.0 = Tile::Wall;
-        }
-        if let Some(tile) = map.get_mut(position_to_index(x, height - 1, width)) {
-            tile.0 = Tile::Wall;
-        }
+        map[x as usize][0] = Tile::Wall;
+        map[x as usize][(height - 1) as usize] = Tile::Wall;
     }
     for y in 0..height {
-        if let Some(tile) = map.get_mut(position_to_index(0, y, width)) {
-            tile.0 = Tile::Wall;
-        }
-        if let Some(tile) = map.get_mut(position_to_index(width - 1, y, width)) {
-            tile.0 = Tile::Wall;
-        }
+        map[0][y as usize] = Tile::Wall;
+        map[(width - 1) as usize][y as usize] = Tile::Wall;
     }
 
     // Now we'll randomly splat a bunch of walls. It won't be pretty, but it's a decent illustration.
     // First, obtain the thread-local RNG:
-    let mut rng = rand::thread_rng();
+    let mut rng = Rng::new();
 
-    for _i in 0..200 {
-        let x = rng.gen_range(0, width - 1);
-        let y = rng.gen_range(0, height - 1);
-        let index = position_to_index(x, y, width);
-        if let Some(tile) = map.get_mut(index) {
-            tile.0 = Tile::Wall;
-        }
+    for _i in 0..num_walls {
+        let x = rng.usize(..(width - 1) as usize);
+        let y = rng.usize(..(height - 1) as usize);
+        map[x][y] = Tile::Wall;
     }
 
     map

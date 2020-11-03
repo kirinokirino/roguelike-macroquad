@@ -1,4 +1,5 @@
-use macroquad::{draw_texture_ex, vec2, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
+use macroquad::{draw_texture_ex, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
+
 /// Available kinds of Tiles. `value()` is their position on the `TileAtlas`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tile {
@@ -15,7 +16,7 @@ impl Tile {
             Self::Pengu => (2., 0.),
         }
     }
-    const fn is_walkable(self) -> bool {
+    pub const fn is_walkable(self) -> bool {
         match self {
             Self::Wall => false,
             Self::Grass => true,

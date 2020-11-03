@@ -26,10 +26,11 @@
     clippy::explicit_iter_loop
 )]
 
-use legion::{system, IntoQuery, Resources, Schedule, World};
+use legion::{system, Resources, Schedule, World};
+
 use macroquad::{
     clear_background, debug, draw_circle, draw_text, is_key_pressed, is_mouse_button_down,
-    load_texture, next_frame, set_camera, set_default_camera, vec2, warn, Camera2D, Color, KeyCode,
+    load_texture, next_frame, set_camera, set_default_camera, warn, Camera2D, Color, KeyCode,
     MouseButton,
 };
 
@@ -38,7 +39,7 @@ use crate::map::generators::_random_map;
 use crate::map::tiles::{Position, Tile, TileAtlas};
 
 mod characters;
-use crate::characters::player::{IsPlayer, Mover};
+use crate::characters::player::IsPlayer;
 
 mod utils;
 use utils::settings::Settings;
@@ -52,11 +53,9 @@ async fn main() {
     // Init world and resources of legion ECS.
     let mut world = World::default();
     let mut resources = Resources::default();
-
-    // Construct a systems schedule of legion ECS.
     let mut schedule = Schedule::builder()
-        .add_system(draw_map_system())
-        .add_system(draw_player_system())
+        .add_system(handle_keyboard_system())
+        .add_system(draw_system())
         .build();
 
     // Load assets.
@@ -81,27 +80,18 @@ async fn main() {
         "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let map = _random_map(settings.width, settings.height);
+    let map = _random_map(settings.width as usize, settings.height as usize, 50);
     // We push that map into the world, to draw it with `draw_map_system()`
-    world.extend(map);
+    resources.insert(map);
 
     // Insert the player into the world.
-    world.push((
-        Tile::Pengu,
-        Position { x: 1, y: 1 },
-        IsPlayer {},
-        Mover { x: 0, y: 0 },
-    ));
+    world.push((Tile::Pengu, Position { x: 1, y: 1 }, IsPlayer {}));
 
     // The main infinite "Input Update Draw" loop.
     loop {
         // ===========Input===========
         // Get the mouse position inside the game world.
         let mouse_position = relative_mouse_position(&main_camera);
-
-        // Player input.
-        left_mouse_pressed = handle_mouse(left_mouse_pressed, main_camera);
-        handle_keyboard(&mut world);
 
         // ===========Update===========
         // Checks for input related to camera and changes it accordingly.
@@ -119,8 +109,8 @@ async fn main() {
             ..macroquad::Camera2D::default()
         });
 
-        // ECS systems executions.
         schedule.execute(&mut world, &mut resources);
+        // ----------------------------------------
 
         // Draw the mouse cursor.
         draw_circle(
@@ -138,15 +128,42 @@ async fn main() {
     }
 }
 
-/// Go through the map and drow the tiles with provided TileAtlas.
-#[system(for_each)]
-fn draw_map(tile: &Tile, pos: &Position, #[resource] atlas: &TileAtlas) {
-    atlas.draw_tile(tile, pos);
+/*
+fn check_moves(world: &mut World) {
+    let mut query = <(&Position, &IsWalkable)>::query();
+    let (left, mut right) = world.split_for_query(&query);
+    let mut mover_query = <&mut Mover>::query();
+    for mover in mover_query.iter_mut(&mut right) {
+        for (pos, is_walkable) in query.iter(&left) {
+            if is_walkable.get() {
+                if pos == mover {
+                    mover.able_to_move = true;
+                }
+            }
+        }
+    }
 }
+*/
 
-/// Draws the player. Shoul be called after the `draw_map`.
 #[system(for_each)]
-fn draw_player(player: &IsPlayer, tile: &Tile, pos: &Position, #[resource] atlas: &TileAtlas) {
+fn draw(
+    pos: &mut Position,
+    tile: &Tile,
+    _: &IsPlayer,
+    #[resource] map: &Vec<Vec<Tile>>,
+    #[resource] atlas: &TileAtlas,
+) {
+    for (x, row) in map.iter().enumerate() {
+        for (y, map_tile) in row.iter().enumerate() {
+            atlas.draw_tile(
+                map_tile,
+                &Position {
+                    x: x as i32,
+                    y: y as i32,
+                },
+            );
+        }
+    }
     atlas.draw_tile(tile, pos);
 }
 
@@ -165,22 +182,24 @@ fn draw_ui() {
 }
 
 /// Handle the keyboard. Move the player.
-fn handle_keyboard(world: &mut World) {
-    let mut query = <(&IsPlayer, &mut Mover)>::query();
-
-    for (_, bacing) in query.iter_mut(world) {
-        if is_key_pressed(KeyCode::Right) {
-            bacing.try_move((1, 0));
-        }
-        if is_key_pressed(KeyCode::Left) {
-            bacing.try_move((-1, 0));
-        }
-        if is_key_pressed(KeyCode::Down) {
-            bacing.try_move((0, -1));
-        }
-        if is_key_pressed(KeyCode::Up) {
-            bacing.try_move((0, 1));
-        }
+#[system(for_each)]
+fn handle_keyboard(pos: &mut Position, _: &IsPlayer, #[resource] map: &Vec<Vec<Tile>>) {
+    let current = pos.clone();
+    if is_key_pressed(KeyCode::Right) {
+        pos.x += 1;
+    }
+    if is_key_pressed(KeyCode::Left) {
+        pos.x -= 1;
+    }
+    if is_key_pressed(KeyCode::Down) {
+        pos.y -= 1;
+    }
+    if is_key_pressed(KeyCode::Up) {
+        pos.y += 1;
+    }
+    if map[pos.x as usize][pos.y as usize] == Tile::Wall {
+        pos.x = current.x;
+        pos.y = current.y;
     }
 }
 
