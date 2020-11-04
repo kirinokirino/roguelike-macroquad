@@ -5,6 +5,7 @@ use std::cmp::{max, min};
 
 pub struct Map {
     pub tiles: Vec<Vec<Tile>>,
+    pub revealed_tiles: Vec<Vec<bool>>,
     pub rooms: Option<Vec<Rect>>,
     width: usize,
     height: usize,
@@ -14,8 +15,10 @@ impl Map {
     /// Creates a new map filled with provided tile.
     pub fn new(fill_tile: Tile, width: usize, height: usize) -> Self {
         let tiles = vec![vec![fill_tile; height]; width];
+        let revealed_tiles = vec![vec![false; height]; width];
         Self {
             tiles,
+            revealed_tiles,
             rooms: None,
             width,
             height,

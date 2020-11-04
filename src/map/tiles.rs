@@ -25,6 +25,15 @@ impl Tile {
             Self::Pengu => false,
         }
     }
+
+    /// Check if you can see through that tile.
+    pub const fn is_opaque(self) -> bool {
+        match self {
+            Self::Wall => true,
+            Self::Grass => false,
+            Self::Pengu => false,
+        }
+    }
 }
 
 /// Is used to split one `Texture2D` into different tiles.
@@ -67,6 +76,12 @@ impl TileAtlas {
 pub struct Position {
     pub x: i32,
     pub y: i32,
+}
+
+impl Position {
+    pub fn as_tuple(&self) -> (i32, i32) {
+        (self.x, self.y)
+    }
 }
 
 impl From<Point> for Position {

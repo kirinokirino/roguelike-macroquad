@@ -40,7 +40,7 @@ use crate::map::tiles::{Position, Tile, TileAtlas};
 use crate::map::Rect;
 
 mod characters;
-use crate::characters::player::IsPlayer;
+use crate::characters::player::{IsPlayer, Viewshed};
 
 mod utils;
 use utils::settings::Settings;
@@ -55,6 +55,7 @@ async fn main() {
     let mut world = World::default();
     let mut resources = Resources::default();
     let mut schedule = Schedule::builder()
+        .add_system(update_viewshed_system())
         .add_system(handle_keyboard_system())
         .add_system(draw_system())
         .build();
@@ -79,6 +80,7 @@ async fn main() {
     let map = rooms_map(settings.width, settings.height, settings.gen_param);
     // We push that map into the world, to draw it with `draw_system()`
     resources.insert(map.tiles);
+    resources.insert(map.revealed_tiles);
 
     // Starting position is the center of the last room.
     let starting_position = Position::from(
@@ -89,7 +91,15 @@ async fn main() {
             .center(),
     );
     // Insert the player into the world.
-    world.push((Tile::Pengu, starting_position, IsPlayer {}));
+    world.push((
+        Tile::Pengu,
+        starting_position,
+        IsPlayer {},
+        Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+        },
+    ));
 
     // Initialize main camera.
     let mut main_camera = Camera::default();
@@ -153,6 +163,39 @@ fn check_moves(world: &mut World) {
 }
 */
 
+// Calculate the viewshed.
+#[system(for_each)]
+fn update_viewshed(
+    viewshed: &mut Viewshed,
+    origin: &Position,
+    _: &IsPlayer,
+    #[resource] map: &Vec<Vec<Tile>>,
+    #[resource] revealed_tiles: &mut Vec<Vec<bool>>,
+) {
+    viewshed.visible_tiles.clear();
+    use symmetric_shadowcasting::compute_fov;
+    let mut is_blocking = |pos: (isize, isize)| {
+        let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
+        return outside || map[pos.0 as usize][pos.1 as usize].is_opaque();
+    };
+
+    let mut mark_visible = |pos: (isize, isize)| {
+        let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
+        let tile_pos = Position {
+            x: pos.0 as i32,
+            y: pos.1 as i32,
+        };
+        if !outside && !viewshed.visible_tiles.contains(&tile_pos) {
+            viewshed.visible_tiles.push(tile_pos);
+            revealed_tiles[tile_pos.x as usize][tile_pos.y as usize] = true;
+        }
+    };
+
+    let (ox, oy) = origin.as_tuple();
+    let origin = (ox as isize, oy as isize);
+    compute_fov(origin, &mut is_blocking, &mut mark_visible);
+}
+
 // Render the map and then the in-game entities.
 #[system(for_each)]
 fn draw(
@@ -160,17 +203,20 @@ fn draw(
     tile: &Tile,
     _: &IsPlayer,
     #[resource] map: &Vec<Vec<Tile>>,
+    #[resource] revealed_tiles: &Vec<Vec<bool>>,
     #[resource] atlas: &TileAtlas,
 ) {
     for (x, row) in map.iter().enumerate() {
         for (y, map_tile) in row.iter().enumerate() {
-            atlas.draw_tile(
-                map_tile,
-                &Position {
-                    x: x as i32,
-                    y: y as i32,
-                },
-            );
+            if revealed_tiles[x][y] {
+                atlas.draw_tile(
+                    map_tile,
+                    &Position {
+                        x: x as i32,
+                        y: y as i32,
+                    },
+                );
+            }
         }
     }
     atlas.draw_tile(tile, pos);
