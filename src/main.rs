@@ -31,11 +31,11 @@ use legion::{system, Resources, Schedule, World};
 use macroquad::{
     clear_background, debug, draw_circle, draw_text, error, is_key_pressed, is_mouse_button_down,
     load_texture, next_frame, set_camera, set_default_camera, warn, Camera2D, Color, KeyCode,
-    MouseButton, Vec2,
+    MouseButton, Vec2, BLACK, GRAY, WHITE,
 };
 
 mod map;
-use crate::map::generators::rooms_map;
+use crate::map::generators::{_random_map, rooms_map};
 use crate::map::tiles::{Position, Tile, TileAtlas};
 use crate::map::Rect;
 
@@ -85,7 +85,7 @@ async fn main() {
     // Starting position is the center of the last room.
     let starting_position = Position::from(
         map.rooms
-            .expect("map has no rooms!")
+            .unwrap_or(Vec::new())
             .last()
             .unwrap_or(&Rect::default())
             .center(),
@@ -98,6 +98,7 @@ async fn main() {
         Viewshed {
             visible_tiles: Vec::new(),
             range: 8,
+            dirty: true,
         },
     ));
 
@@ -117,7 +118,7 @@ async fn main() {
 
         // ===========Draw===========
         // Fill the canvas with white.
-        clear_background(Color([255, 255, 255, 255]));
+        clear_background(BLACK);
 
         // --- Camera space, render game objects.
         let (target, zoom) = main_camera.get();
@@ -163,7 +164,7 @@ fn check_moves(world: &mut World) {
 }
 */
 
-// Calculate the viewshed.
+/// Calculate the viewshed.
 #[system(for_each)]
 fn update_viewshed(
     viewshed: &mut Viewshed,
@@ -172,28 +173,30 @@ fn update_viewshed(
     #[resource] map: &Vec<Vec<Tile>>,
     #[resource] revealed_tiles: &mut Vec<Vec<bool>>,
 ) {
-    viewshed.visible_tiles.clear();
-    use symmetric_shadowcasting::compute_fov;
-    let mut is_blocking = |pos: (isize, isize)| {
-        let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
-        return outside || map[pos.0 as usize][pos.1 as usize].is_opaque();
-    };
-
-    let mut mark_visible = |pos: (isize, isize)| {
-        let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
-        let tile_pos = Position {
-            x: pos.0 as i32,
-            y: pos.1 as i32,
+    if viewshed.dirty {
+        viewshed.visible_tiles.clear();
+        use symmetric_shadowcasting::compute_fov;
+        let mut is_blocking = |pos: (isize, isize)| {
+            let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
+            return outside || map[pos.0 as usize][pos.1 as usize].is_opaque();
         };
-        if !outside && !viewshed.visible_tiles.contains(&tile_pos) {
-            viewshed.visible_tiles.push(tile_pos);
-            revealed_tiles[tile_pos.x as usize][tile_pos.y as usize] = true;
-        }
-    };
 
-    let (ox, oy) = origin.as_tuple();
-    let origin = (ox as isize, oy as isize);
-    compute_fov(origin, &mut is_blocking, &mut mark_visible);
+        let mut mark_visible = |pos: (isize, isize)| {
+            let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
+            let tile_pos = Position {
+                x: pos.0 as i32,
+                y: pos.1 as i32,
+            };
+            if !outside && !viewshed.visible_tiles.contains(&tile_pos) {
+                viewshed.visible_tiles.push(tile_pos);
+                revealed_tiles[tile_pos.x as usize][tile_pos.y as usize] = true;
+            }
+        };
+
+        let (ox, oy) = origin.as_tuple();
+        let origin = (ox as isize, oy as isize);
+        compute_fov(origin, &mut is_blocking, &mut mark_visible);
+    }
 }
 
 // Render the map and then the in-game entities.
@@ -202,6 +205,7 @@ fn draw(
     pos: &mut Position,
     tile: &Tile,
     _: &IsPlayer,
+    viewshed: &Viewshed,
     #[resource] map: &Vec<Vec<Tile>>,
     #[resource] revealed_tiles: &Vec<Vec<bool>>,
     #[resource] atlas: &TileAtlas,
@@ -209,17 +213,32 @@ fn draw(
     for (x, row) in map.iter().enumerate() {
         for (y, map_tile) in row.iter().enumerate() {
             if revealed_tiles[x][y] {
-                atlas.draw_tile(
-                    map_tile,
-                    &Position {
-                        x: x as i32,
-                        y: y as i32,
-                    },
-                );
+                if viewshed.visible_tiles.contains(&Position {
+                    x: x as i32,
+                    y: y as i32,
+                }) {
+                    atlas.draw_tile(
+                        map_tile,
+                        &Position {
+                            x: x as i32,
+                            y: y as i32,
+                        },
+                        WHITE,
+                    );
+                } else {
+                    atlas.draw_tile(
+                        map_tile,
+                        &Position {
+                            x: x as i32,
+                            y: y as i32,
+                        },
+                        GRAY,
+                    );
+                }
             }
         }
     }
-    atlas.draw_tile(tile, pos);
+    atlas.draw_tile(tile, pos, WHITE);
 }
 
 /// Render the fixed screen ui. (after `set_default_camera()`)
@@ -238,9 +257,14 @@ fn draw_ui() {
 
 /// Handle the keyboard. Try to move the player (handles collisions).
 #[system(for_each)]
-fn handle_keyboard(pos: &mut Position, _: &IsPlayer, #[resource] map: &Vec<Vec<Tile>>) {
+fn handle_keyboard(
+    current_pos: &mut Position,
+    viewshed: &mut Viewshed,
+    _: &IsPlayer,
+    #[resource] map: &Vec<Vec<Tile>>,
+) {
     // Saves the current position in case the destination is not walkable.
-    let go_back_to = pos.clone();
+    let mut pos = current_pos.clone();
     if is_key_pressed(KeyCode::Right) {
         pos.x += 1;
     }
@@ -258,26 +282,12 @@ fn handle_keyboard(pos: &mut Position, _: &IsPlayer, #[resource] map: &Vec<Vec<T
     // Prints coords of out-of-bounds entities.
     if let Some(row) = map.get(pos.x as usize) {
         if let Some(tile) = row.get(pos.y as usize) {
-            if !tile.is_walkable() {
-                pos.x = go_back_to.x;
-                pos.y = go_back_to.y;
+            if tile.is_walkable() {
+                current_pos.x = pos.x;
+                current_pos.y = pos.y;
+                viewshed.dirty = true;
             }
-        } else {
-            warn!(
-                "This entity tried to go out of bounds! X: {}, Y: {}",
-                go_back_to.x, go_back_to.y
-            );
-            pos.x = go_back_to.x;
-            pos.y = go_back_to.y;
         }
-    } else {
-        warn!(
-            "This entity tried to go out of bounds! X: {}, Y: {}",
-            go_back_to.x, go_back_to.y
-        );
-
-        pos.x = go_back_to.x;
-        pos.y = go_back_to.y;
     }
 }
 
