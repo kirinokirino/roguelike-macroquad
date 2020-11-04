@@ -3,8 +3,9 @@ use std::fs;
 use std::io::Error;
 
 // Default values in case there is no config file found.
-const WIDTH: i32 = 40;
-const HEIGHT: i32 = 40;
+const WIDTH: usize = 40;
+const HEIGHT: usize = 40;
+const GEN_PARAM: i32 = 10;
 const ZOOM_SPEED: f32 = 0.98;
 const SCROLL_SPEED: f32 = 0.02;
 
@@ -34,11 +35,12 @@ impl ConfigFile {
     }
 }
 
-// Centralized struct for all customizable variables.
+/// Centralized struct for all customizable variables.
 pub struct Settings {
     _config: Option<ConfigFile>,
-    pub width: i32,
-    pub height: i32,
+    pub width: usize,
+    pub height: usize,
+    pub gen_param: i32,
     pub scroll_speed: f32,
     pub zoom_speed: f32,
 }
@@ -63,17 +65,23 @@ impl Settings {
     fn parse_config(config: ConfigFile) -> Self {
         let mut width = WIDTH;
         let mut height = HEIGHT;
+        let mut gen_param = GEN_PARAM;
         let mut scroll_speed = SCROLL_SPEED;
         let mut zoom_speed = ZOOM_SPEED;
         for (key, value) in &config.vars {
             match key.as_str() {
                 "width" => {
                     width = value
-                        .parse::<i32>()
+                        .parse::<usize>()
                         .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
                 }
                 "height" => {
                     height = value
+                        .parse::<usize>()
+                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                }
+                "gen_param" => {
+                    gen_param = value
                         .parse::<i32>()
                         .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
                 }
@@ -94,6 +102,7 @@ impl Settings {
             _config: Some(config),
             width,
             height,
+            gen_param,
             scroll_speed,
             zoom_speed,
         }
@@ -106,6 +115,7 @@ impl Default for Settings {
             _config: None,
             width: WIDTH,
             height: HEIGHT,
+            gen_param: GEN_PARAM,
             scroll_speed: SCROLL_SPEED,
             zoom_speed: ZOOM_SPEED,
         }

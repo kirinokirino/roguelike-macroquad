@@ -1,10 +1,6 @@
 pub mod generators;
 pub mod tiles;
 
-pub const fn position_to_index(x: i32, y: i32, width: i32) -> usize {
-    ((y * width) + x) as usize
-}
-
 #[derive(Debug, Copy, Clone)]
 pub struct Point {
     pub x: i32,

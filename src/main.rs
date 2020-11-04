@@ -29,13 +29,13 @@
 use legion::{system, Resources, Schedule, World};
 
 use macroquad::{
-    clear_background, debug, draw_circle, draw_text, is_key_pressed, is_mouse_button_down,
+    clear_background, debug, draw_circle, draw_text, error, is_key_pressed, is_mouse_button_down,
     load_texture, next_frame, set_camera, set_default_camera, warn, Camera2D, Color, KeyCode,
-    MouseButton,
+    MouseButton, Vec2,
 };
 
 mod map;
-use crate::map::generators::_random_map;
+use crate::map::generators::rooms_map;
 use crate::map::tiles::{Position, Tile, TileAtlas};
 
 mod characters;
@@ -72,26 +72,26 @@ async fn main() {
     // to detect mouse clicks and not just "is pressed"
     let mut left_mouse_pressed = false;
 
-    // Tiles is an enum of tile types, like Wall, Grass, Pengu.
-    // Tile is a concrete struct with associated map coordinates.
-    // `rooms_map()` is a generator that provides a layout. (There are
+    // Tile is an enum of tile types, like Wall, Grass, Pengu.
+    // `rooms_map()` is a generator for the level. (There are
     // different types of generators)
     println!(
         "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let map = _random_map(settings.width as usize, settings.height as usize, 50);
-    // We push that map into the world, to draw it with `draw_map_system()`
+    let map = rooms_map(settings.width, settings.height, settings.gen_param);
+    // We push that map into the world, to draw it with `draw_system()`
     resources.insert(map);
 
     // Insert the player into the world.
     world.push((Tile::Pengu, Position { x: 1, y: 1 }, IsPlayer {}));
 
-    // The main infinite "Input Update Draw" loop.
+    // The infinite game loop.
     loop {
         // ===========Input===========
         // Get the mouse position inside the game world.
         let mouse_position = relative_mouse_position(&main_camera);
+        left_mouse_pressed = handle_mouse(left_mouse_pressed, mouse_position);
 
         // ===========Update===========
         // Checks for input related to camera and changes it accordingly.
@@ -109,15 +109,15 @@ async fn main() {
             ..macroquad::Camera2D::default()
         });
 
+        // ----------ECS schedule exec---------------
         schedule.execute(&mut world, &mut resources);
-        // ----------------------------------------
 
         // Draw the mouse cursor.
         draw_circle(
             mouse_position.x(),
             mouse_position.y(),
-            0.2,
-            Color([200, 150, 225, 255]),
+            0.1,
+            Color([100, 75, 120, 255]),
         );
 
         // --- Fixed screen space, render ui.
@@ -145,6 +145,7 @@ fn check_moves(world: &mut World) {
 }
 */
 
+// Render the map and then the in-game entities.
 #[system(for_each)]
 fn draw(
     pos: &mut Position,
@@ -181,10 +182,11 @@ fn draw_ui() {
     );
 }
 
-/// Handle the keyboard. Move the player.
+/// Handle the keyboard. Try to move the player (handles collisions).
 #[system(for_each)]
 fn handle_keyboard(pos: &mut Position, _: &IsPlayer, #[resource] map: &Vec<Vec<Tile>>) {
-    let current = pos.clone();
+    // Saves the current position in case the destination is not walkable.
+    let go_back_to = pos.clone();
     if is_key_pressed(KeyCode::Right) {
         pos.x += 1;
     }
@@ -197,19 +199,43 @@ fn handle_keyboard(pos: &mut Position, _: &IsPlayer, #[resource] map: &Vec<Vec<T
     if is_key_pressed(KeyCode::Up) {
         pos.y += 1;
     }
-    if map[pos.x as usize][pos.y as usize] == Tile::Wall {
-        pos.x = current.x;
-        pos.y = current.y;
+
+    // Resets the position if the destination is not walkable.
+    // Prints coords of out-of-bounds entities.
+    if let Some(row) = map.get(pos.x as usize) {
+        if let Some(tile) = row.get(pos.y as usize) {
+            if !tile.is_walkable() {
+                pos.x = go_back_to.x;
+                pos.y = go_back_to.y;
+            }
+        } else {
+            warn!(
+                "This entity tried to go out of bounds! X: {}, Y: {}",
+                go_back_to.x, go_back_to.y
+            );
+            pos.x = go_back_to.x;
+            pos.y = go_back_to.y;
+        }
+    } else {
+        warn!(
+            "This entity tried to go out of bounds! X: {}, Y: {}",
+            go_back_to.x, go_back_to.y
+        );
+
+        pos.x = go_back_to.x;
+        pos.y = go_back_to.y;
     }
 }
 
 /// Handle the mouse. Print the click position.
-fn handle_mouse(left_mouse_pressed: bool, main_camera: Camera) -> bool {
+fn handle_mouse(left_mouse_pressed: bool, mouse_position: Vec2) -> bool {
     if is_mouse_button_down(MouseButton::Left) {
         if !left_mouse_pressed {
-            let pos = relative_mouse_position(&main_camera);
-
-            debug!("Mouse click at relative x:{} , y:{}", pos.x(), pos.y());
+            debug!(
+                "Mouse click at relative x:{} , y:{}",
+                mouse_position.x() as i32,
+                mouse_position.y() as i32
+            );
         }
         true
     } else {

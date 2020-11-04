@@ -9,6 +9,7 @@ pub enum Tile {
 }
 
 impl Tile {
+    /// Get their position on the `TileAtlas`.
     const fn value(self) -> (f32, f32) {
         match self {
             Self::Wall => (0., 0.),
@@ -16,6 +17,7 @@ impl Tile {
             Self::Pengu => (2., 0.),
         }
     }
+    /// Check if entities can walk on that tile.
     pub const fn is_walkable(self) -> bool {
         match self {
             Self::Wall => false,
@@ -59,12 +61,15 @@ impl TileAtlas {
         draw_texture_ex(self.texture, pos.x as f32, pos.y as f32, WHITE, params);
     }
 }
+
+/// The coordinates on the world grid.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
 }
 
+/// Used for drawing the texture in macroquad. Points to the tile in atlas.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct AtlasPosition {
     x: f32,
