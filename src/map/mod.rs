@@ -1,5 +1,6 @@
 pub mod generators;
 pub mod tiles;
+use crate::map::tiles::Position;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Point {
@@ -12,6 +13,19 @@ impl Point {
         Self { x, y }
     }
 }
+
+impl Default for Point {
+    fn default() -> Self {
+        Self { x: 1, y: 1 }
+    }
+}
+
+impl From<Position> for Point {
+    fn from(pos: Position) -> Self {
+        Self { x: pos.x, y: pos.y }
+    }
+}
+
 pub struct Rect {
     pub top_left: Point,
     pub down_right: Point,
@@ -69,6 +83,15 @@ impl Rect {
         Point {
             x: (self.top_left.x + self.down_right.x) / 2,
             y: (self.top_left.y + self.down_right.y) / 2,
+        }
+    }
+}
+
+impl Default for Rect {
+    fn default() -> Self {
+        Self {
+            top_left: Point::default(),
+            down_right: Point::default(),
         }
     }
 }

@@ -37,6 +37,7 @@ use macroquad::{
 mod map;
 use crate::map::generators::rooms_map;
 use crate::map::tiles::{Position, Tile, TileAtlas};
+use crate::map::Rect;
 
 mod characters;
 use crate::characters::player::IsPlayer;
@@ -64,10 +65,6 @@ async fn main() {
     // Construct TileAtlas.
     let atlas = TileAtlas::new(texture, 32., 32.);
     resources.insert(atlas);
-
-    // Initialize main camera.
-    let mut main_camera = Camera::default();
-
     // We need to save the state of the mouse button
     // to detect mouse clicks and not just "is pressed"
     let mut left_mouse_pressed = false;
@@ -79,13 +76,18 @@ async fn main() {
         "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let map = rooms_map(settings.width, settings.height, settings.gen_param);
+    let (rooms, map) = rooms_map(settings.width, settings.height, settings.gen_param);
     // We push that map into the world, to draw it with `draw_system()`
     resources.insert(map);
 
+    // Starting position is the center of the last room.
+    let starting_position = Position::from(rooms.last().unwrap_or(&Rect::default()).center());
     // Insert the player into the world.
-    world.push((Tile::Pengu, Position { x: 1, y: 1 }, IsPlayer {}));
+    world.push((Tile::Pengu, starting_position, IsPlayer {}));
 
+    // Initialize main camera.
+    let mut main_camera = Camera::default();
+    main_camera.set_target(starting_position.into());
     // The infinite game loop.
     loop {
         // ===========Input===========

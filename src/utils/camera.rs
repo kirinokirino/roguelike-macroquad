@@ -10,6 +10,10 @@ impl Camera {
     pub const fn get(&self) -> (Vec2, Vec2) {
         (self.target, self.zoom)
     }
+
+    pub fn set_target(&mut self, new_target: Vec2) {
+        self.target = new_target;
+    }
 }
 
 impl Default for Camera {

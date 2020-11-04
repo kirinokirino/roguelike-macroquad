@@ -1,5 +1,5 @@
-use macroquad::{draw_texture_ex, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
-
+use crate::map::Point;
+use macroquad::{draw_texture_ex, vec2, DrawTextureParams, Rect, Texture2D, Vec2, WHITE};
 /// Available kinds of Tiles. `value()` is their position on the `TileAtlas`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tile {
@@ -67,6 +67,21 @@ impl TileAtlas {
 pub struct Position {
     pub x: i32,
     pub y: i32,
+}
+
+impl From<Point> for Position {
+    fn from(point: Point) -> Self {
+        Self {
+            x: point.x,
+            y: point.y,
+        }
+    }
+}
+
+impl Into<Vec2> for Position {
+    fn into(self) -> Vec2 {
+        vec2(self.x as f32, self.y as f32)
+    }
 }
 
 /// Used for drawing the texture in macroquad. Points to the tile in atlas.

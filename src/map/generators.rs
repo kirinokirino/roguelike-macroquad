@@ -40,7 +40,7 @@ fn make_borders(width: usize, height: usize, map: &mut Vec<Vec<Tile>>) {
 }
 
 /// Generates a map. Randomly placed broken rooms.
-pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> Vec<Vec<Tile>> {
+pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> (Vec<Rect>, Vec<Vec<Tile>>) {
     const MIN_SIZE: usize = 3;
     const MAX_SIZE: usize = 15;
 
@@ -91,7 +91,7 @@ pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> Vec<Vec<Tile>> 
     }
     */
     make_borders(width, height, &mut map);
-    map
+    (rooms, map)
 }
 
 /// Fill the provided rectangle with Grass tiles and place it on the map.
