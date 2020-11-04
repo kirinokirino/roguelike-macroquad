@@ -1,50 +1,99 @@
 use crate::map::tiles::Tile;
 use crate::map::{Point, Rect};
 use fastrand::Rng;
-use std::iter::repeat_with;
-
 use std::cmp::{max, min};
-/// Generates a map. Randomly placed walls.
-pub fn _random_map(width: usize, height: usize, num_walls: i32) -> Vec<Vec<Tile>> {
-    let mut map = create_map(Tile::Grass, width, height);
-    // Now we'll randomly splat a bunch of walls. It won't be pretty, but it's a decent illustration.
-    // First, obtain the thread-local RNG:
-    let rng = Rng::new();
 
-    for _i in 0..num_walls {
-        let x = rng.usize(..(width - 1) as usize);
-        let y = rng.usize(..(height - 1) as usize);
-        map[x][y] = Tile::Wall;
-    }
-
-    make_borders(width, height, &mut map);
-    map
+pub struct Map {
+    pub tiles: Vec<Vec<Tile>>,
+    pub rooms: Option<Vec<Rect>>,
+    width: usize,
+    height: usize,
 }
 
-/// Creates a map filled with grass.
-fn create_map(fill_tile: Tile, width: usize, height: usize) -> Vec<Vec<Tile>> {
-    vec![vec![fill_tile; height]; width]
-}
-
-/// Creates the border of walls for the provided map.
-fn make_borders(width: usize, height: usize, map: &mut Vec<Vec<Tile>>) {
-    // Make the boundaries walls
-    for x in 0..width {
-        map[x as usize][0] = Tile::Wall;
-        map[x as usize][(height - 1) as usize] = Tile::Wall;
+impl Map {
+    /// Creates a new map filled with provided tile.
+    pub fn new(fill_tile: Tile, width: usize, height: usize) -> Self {
+        let tiles = vec![vec![fill_tile; height]; width];
+        Self {
+            tiles,
+            rooms: None,
+            width,
+            height,
+        }
     }
-    for y in 0..height {
-        map[0][y as usize] = Tile::Wall;
-        map[(width - 1) as usize][y as usize] = Tile::Wall;
+
+    pub fn set_rooms(&mut self, rooms: Option<Vec<Rect>>) {
+        self.rooms = rooms;
+        self.apply_rooms();
+    }
+
+    /// Creates the border of walls for the provided map.
+    pub fn make_borders(&mut self) {
+        // Make the boundaries walls
+        for x in 0..self.width {
+            self.tiles[x as usize][0] = Tile::Wall;
+            self.tiles[x as usize][(self.height - 1) as usize] = Tile::Wall;
+        }
+        for y in 0..self.height {
+            self.tiles[0][y as usize] = Tile::Wall;
+            self.tiles[(self.width - 1) as usize][y as usize] = Tile::Wall;
+        }
+    }
+
+    fn apply_vertical_corridor(&mut self, starting_point: &Point, len: i32) {
+        let (x, y) = starting_point.as_tuple();
+        for target_y in min(y, y + len)..=max(y, y + len) {
+            self.tiles[x as usize][target_y as usize] = Tile::Grass;
+        }
+    }
+
+    fn apply_horizontal_corridor(&mut self, starting_point: &Point, len: i32) {
+        let (x, y) = starting_point.as_tuple();
+        for target_x in min(x, x + len)..=max(x, x + len) {
+            self.tiles[target_x as usize][y as usize] = Tile::Grass;
+        }
+    }
+
+    fn apply_rooms(&mut self) {
+        if let Some(rooms) = &self.rooms {
+            for room in rooms.iter() {
+                let walls = room.get_walls_positions();
+                for (x, y) in walls {
+                    self.tiles[x][y] = Tile::Wall;
+                }
+
+                let floors = room.get_floors_positions();
+                for (x, y) in floors {
+                    self.tiles[x][y] = Tile::Grass;
+                }
+            }
+            self.connect_rooms();
+        }
+    }
+
+    /// Connect a pair of rooms with L shaped corridor.
+    fn connect_rooms(&mut self) {
+        let mut corridors: Vec<(Point, Point)> = Vec::new();
+        if let Some(rooms) = &self.rooms {
+            for (room, next_room) in rooms.iter().zip(rooms.iter().skip(1)) {
+                let center1 = room.center();
+                let center2 = next_room.center();
+                corridors.push((center1, center2));
+            }
+        }
+        for (center1, center2) in corridors.iter() {
+            self.apply_horizontal_corridor(center1, center2.x - center1.x);
+            self.apply_vertical_corridor(center2, center1.y - center2.y);
+        }
     }
 }
 
 /// Generates a map. Randomly placed broken rooms.
-pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> (Vec<Rect>, Vec<Vec<Tile>>) {
+pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> Map {
     const MIN_SIZE: usize = 3;
     const MAX_SIZE: usize = 15;
 
-    let mut map = create_map(Tile::Wall, width, height);
+    let mut map = Map::new(Tile::Wall, width, height);
 
     let mut rooms: Vec<Rect> = Vec::new();
     let rng = Rng::new();
@@ -74,13 +123,7 @@ pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> (Vec<Rect>, Vec
         }
     }
 
-    for room in rooms.iter() {
-        apply_room_to_map(room, &mut map);
-    }
-
-    for (room, next_room) in rooms.iter().zip(rooms.iter().skip(1)) {
-        connect_rooms(room, next_room, &mut map);
-    }
+    map.set_rooms(Some(rooms));
 
     /*
     let other_rooms: Vec<&Rect> = repeat_with(|| rooms.get(rng.usize(..rooms.len())).unwrap())
@@ -90,41 +133,23 @@ pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> (Vec<Rect>, Vec
         connect_rooms(room, other_room, &mut map);
     }
     */
-    make_borders(width, height, &mut map);
-    (rooms, map)
+    map.make_borders();
+    map
 }
 
-/// Fill the provided rectangle with Grass tiles and place it on the map.
-fn apply_room_to_map(room: &Rect, map: &mut Vec<Vec<Tile>>) {
-    let walls = room.get_walls_positions();
-    for (x, y) in walls {
-        map[x][y] = Tile::Wall;
+/// Generates a map. Randomly placed walls.
+pub fn _random_map(width: usize, height: usize, num_walls: i32) -> Map {
+    let mut map = Map::new(Tile::Grass, width, height);
+    // Now we'll randomly splat a bunch of walls. It won't be pretty, but it's a decent illustration.
+    // First, obtain the thread-local RNG:
+    let rng = Rng::new();
+
+    for _i in 0..num_walls {
+        let x = rng.usize(..(width - 1) as usize);
+        let y = rng.usize(..(height - 1) as usize);
+        map.tiles[x][y] = Tile::Wall;
     }
 
-    let floors = room.get_floors_positions();
-    for (x, y) in floors {
-        map[x][y] = Tile::Grass;
-    }
-}
-
-fn apply_vertical_corridor(starting_point: Point, len: i32, map: &mut Vec<Vec<Tile>>) {
-    let Point { x, y } = starting_point;
-    for target_y in min(y, y + len)..=max(y, y + len) {
-        map[x as usize][target_y as usize] = Tile::Grass;
-    }
-}
-
-fn apply_horizontal_corridor(starting_point: Point, len: i32, map: &mut Vec<Vec<Tile>>) {
-    let Point { x, y } = starting_point;
-    for target_x in min(x, x + len)..=max(x, x + len) {
-        map[target_x as usize][y as usize] = Tile::Grass;
-    }
-}
-
-/// Connect a pair of rooms with L shaped corridor.
-fn connect_rooms(room1: &Rect, room2: &Rect, map: &mut Vec<Vec<Tile>>) {
-    let center1 = room1.center();
-    let center2 = room2.center();
-    apply_horizontal_corridor(center1, center2.x - center1.x, map);
-    apply_vertical_corridor(center2, center1.y - center2.y, map)
+    map.make_borders();
+    map
 }

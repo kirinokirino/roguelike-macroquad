@@ -76,12 +76,18 @@ async fn main() {
         "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let (rooms, map) = rooms_map(settings.width, settings.height, settings.gen_param);
+    let map = rooms_map(settings.width, settings.height, settings.gen_param);
     // We push that map into the world, to draw it with `draw_system()`
-    resources.insert(map);
+    resources.insert(map.tiles);
 
     // Starting position is the center of the last room.
-    let starting_position = Position::from(rooms.last().unwrap_or(&Rect::default()).center());
+    let starting_position = Position::from(
+        map.rooms
+            .expect("map has no rooms!")
+            .last()
+            .unwrap_or(&Rect::default())
+            .center(),
+    );
     // Insert the player into the world.
     world.push((Tile::Pengu, starting_position, IsPlayer {}));
 
