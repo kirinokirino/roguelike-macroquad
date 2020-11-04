@@ -35,6 +35,28 @@ impl Rect {
         }
     }
 
+    /// Returns the outer layer of the rectangle.
+    pub fn get_walls_positions(&self) -> Vec<(usize, usize)> {
+        let mut positions: Vec<(usize, usize)> = Vec::new();
+        for x in self.top_left.x - 1..=self.down_right.x {
+            for y in self.top_left.y - 1..=self.down_right.y {
+                positions.push((x as usize, y as usize));
+            }
+        }
+        positions
+    }
+
+    /// Returns the inner rectangle behind the wall.
+    pub fn get_floors_positions(&self) -> Vec<(usize, usize)> {
+        let mut positions: Vec<(usize, usize)> = Vec::new();
+        for x in self.top_left.x..self.down_right.x {
+            for y in self.top_left.y..self.down_right.y {
+                positions.push((x as usize, y as usize));
+            }
+        }
+        positions
+    }
+
     // Returns true if this overlaps with other
     pub const fn intersect(&self, other: &Self) -> bool {
         self.top_left.x <= other.down_right.x
