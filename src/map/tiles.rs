@@ -60,10 +60,10 @@ impl TileAtlas {
         let params = DrawTextureParams {
             dest_size: Some(Vec2::one()),
             source: Some(Rect {
-                x: self.tile_width * atlas_position_x,
+                x: (self.tile_width + 0.2) * atlas_position_x,
                 y: self.tile_height * atlas_position_y,
-                w: self.tile_width,
-                h: self.tile_height,
+                w: self.tile_width - 1.0,
+                h: self.tile_height - 1.0,
             }),
             rotation: std::f32::consts::PI,
         };
