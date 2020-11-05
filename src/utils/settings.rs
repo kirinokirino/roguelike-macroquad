@@ -51,14 +51,14 @@ impl Settings {
         match ConfigFile::new(path) {
             Ok(config) => {
                 println!("Loading settings file.");
-                Settings::parse_config(config)
+                Self::parse_config(config)
             }
             Err(e) => {
                 error!(
                     "Unable to load setting file at {}! Loading default settings. Error: {}",
                     path, e
                 );
-                Settings::default()
+                Self::default()
             }
         }
     }
@@ -73,27 +73,27 @@ impl Settings {
                 "width" => {
                     width = value
                         .parse::<usize>()
-                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                        .unwrap_or_else(|_| panic!("Cannot parse value {} in key {}!", value, key));
                 }
                 "height" => {
                     height = value
                         .parse::<usize>()
-                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                        .unwrap_or_else(|_| panic!("Cannot parse value {} in key {}!", value, key));
                 }
                 "gen_param" => {
                     gen_param = value
                         .parse::<i32>()
-                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                        .unwrap_or_else(|_| panic!("Cannot parse value {} in key {}!", value, key));
                 }
                 "scroll_speed" => {
                     scroll_speed = value
                         .parse::<f32>()
-                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                        .unwrap_or_else(|_| panic!("Cannot parse value {} in key {}!", value, key));
                 }
                 "zoom_speed" => {
                     zoom_speed = value
                         .parse::<f32>()
-                        .expect(format!("Cannot parse value {} in key {}!", value, key).as_str())
+                        .unwrap_or_else(|_| panic!("Cannot parse value {} in key {}!", value, key));
                 }
                 _ => error!("unknown key {}", key),
             }

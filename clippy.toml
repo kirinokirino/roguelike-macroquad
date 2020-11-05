@@ -26,7 +26,7 @@ doc-valid-idents = [
   "IPv4", "IPv6" # added
 ]
 # Lint: TOO-MANY-ARGUMENTS. The maximum number of argument a function or method can have
-too-many-arguments-threshold = 4 #7
+too-many-arguments-threshold = 7
 # Lint: TYPE-COMPLEXITY. The maximum complexity a type can have
 type-complexity-threshold = 150 #250
 # Lint: MANY-SINGLE-CHAR-NAMES. The maximum number of single char bindings a scope may have

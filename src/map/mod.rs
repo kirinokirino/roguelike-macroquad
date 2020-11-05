@@ -13,7 +13,7 @@ impl Point {
     pub const fn _new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
-    fn as_tuple(&self) -> (i32, i32) {
+    const fn as_tuple(&self) -> (i32, i32) {
         (self.x, self.y)
     }
 }

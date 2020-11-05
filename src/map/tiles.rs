@@ -79,7 +79,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn as_tuple(&self) -> (i32, i32) {
+    pub const fn as_tuple(&self) -> (i32, i32) {
         (self.x, self.y)
     }
 }

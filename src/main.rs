@@ -6,7 +6,6 @@
     clippy::clone_on_ref_ptr,
     clippy::else_if_without_else,
     clippy::float_cmp_const,
-    clippy::indexing_slicing,
     clippy::let_underscore_must_use,
     clippy::mem_forget,
     clippy::multiple_inherent_impl,
@@ -19,23 +18,31 @@
     clippy::wrong_pub_self_convention
 )]
 #![allow(
+    clippy::match_same_arms,
     clippy::missing_docs_in_private_items,
     clippy::unknown_clippy_lints,
+    clippy::ptr_arg,
     clippy::expect_used,
     clippy::future_not_send,
-    clippy::explicit_iter_loop
+    clippy::explicit_iter_loop,
+    clippy::indexing_slicing,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::trivially_copy_pass_by_ref
 )]
 
 use legion::{system, Resources, Schedule, World};
 
 use macroquad::{
-    clear_background, debug, draw_circle, draw_text, error, is_key_pressed, is_mouse_button_down,
+    clear_background, debug, draw_circle, draw_text, is_key_pressed, is_mouse_button_down,
     load_texture, next_frame, set_camera, set_default_camera, warn, Camera2D, Color, KeyCode,
     MouseButton, Vec2, BLACK, GRAY, WHITE,
 };
 
 mod map;
-use crate::map::generators::{_random_map, rooms_map};
+use crate::map::generators::rooms_map;
 use crate::map::tiles::{Position, Tile, TileAtlas};
 use crate::map::Rect;
 
@@ -86,7 +93,7 @@ async fn main() {
     // Starting position is the center of the last room.
     let starting_position = Position::from(
         map.rooms
-            .unwrap_or(Vec::new())
+            .unwrap_or_default()
             .last()
             .unwrap_or(&Rect::default())
             .center(),
@@ -179,7 +186,7 @@ fn update_viewshed(
         viewshed.visible_tiles.clear();
         let mut is_blocking = |pos: (isize, isize)| {
             let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
-            return outside || map[pos.0 as usize][pos.1 as usize].is_opaque();
+            outside || map[pos.0 as usize][pos.1 as usize].is_opaque()
         };
 
         let mut mark_visible = |pos: (isize, isize)| {
@@ -199,8 +206,8 @@ fn update_viewshed(
         };
 
         let (ox, oy) = origin.as_tuple();
-        let origin = (ox as isize, oy as isize);
-        compute_fov(origin, &mut is_blocking, &mut mark_visible);
+        let orig = (ox as isize, oy as isize);
+        compute_fov(orig, &mut is_blocking, &mut mark_visible);
     }
 }
 
@@ -269,7 +276,7 @@ fn handle_keyboard(
     #[resource] map: &Vec<Vec<Tile>>,
 ) {
     // Saves the current position in case the destination is not walkable.
-    let mut pos = current_pos.clone();
+    let mut pos = *current_pos;
     if is_key_pressed(KeyCode::Right) {
         pos.x += 1;
     }
