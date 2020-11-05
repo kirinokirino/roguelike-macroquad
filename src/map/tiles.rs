@@ -12,9 +12,9 @@ impl Tile {
     /// Get their position on the `TileAtlas`.
     const fn value(self) -> (f32, f32) {
         match self {
-            Self::Wall => (0., 0.),
-            Self::Grass => (1., 0.),
-            Self::Pengu => (2., 0.),
+            Self::Wall => (1., 0.),
+            Self::Grass => (2., 0.),
+            Self::Pengu => (3., 0.),
         }
     }
     /// Check if entities can walk on that tile.

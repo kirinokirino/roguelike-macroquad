@@ -46,6 +46,7 @@ mod utils;
 use utils::settings::Settings;
 use utils::{camera, camera::relative_mouse_position, camera::Camera};
 
+use std::cmp::max;
 #[macroquad::main("kiriRoguelike")]
 async fn main() {
     // Load settings file.
@@ -173,9 +174,9 @@ fn update_viewshed(
     #[resource] map: &Vec<Vec<Tile>>,
     #[resource] revealed_tiles: &mut Vec<Vec<bool>>,
 ) {
+    use symmetric_shadowcasting::compute_fov;
     if viewshed.dirty {
         viewshed.visible_tiles.clear();
-        use symmetric_shadowcasting::compute_fov;
         let mut is_blocking = |pos: (isize, isize)| {
             let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
             return outside || map[pos.0 as usize][pos.1 as usize].is_opaque();
@@ -183,11 +184,15 @@ fn update_viewshed(
 
         let mut mark_visible = |pos: (isize, isize)| {
             let outside = (pos.1 as usize) >= map.len() || (pos.0 as usize) >= map[0].len();
+            let in_range = (pos.1 as usize) >= max(origin.y - viewshed.range, 0) as usize
+                && (pos.1 as usize) <= (origin.y + viewshed.range) as usize
+                && (pos.0 as usize) >= max(origin.x - viewshed.range, 0) as usize
+                && (pos.0 as usize) <= (origin.x + viewshed.range) as usize;
             let tile_pos = Position {
                 x: pos.0 as i32,
                 y: pos.1 as i32,
             };
-            if !outside && !viewshed.visible_tiles.contains(&tile_pos) {
+            if in_range && !outside && !viewshed.visible_tiles.contains(&tile_pos) {
                 viewshed.visible_tiles.push(tile_pos);
                 revealed_tiles[tile_pos.x as usize][tile_pos.y as usize] = true;
             }
