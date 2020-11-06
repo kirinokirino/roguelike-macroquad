@@ -1,6 +1,7 @@
 use crate::map::tiles::Tile;
 use crate::map::{Point, Rect};
 use fastrand::Rng;
+use noise::*;
 use std::cmp::{max, min};
 
 pub struct Map {
@@ -136,6 +137,32 @@ pub fn rooms_map(width: usize, height: usize, max_rooms: i32) -> Map {
         connect_rooms(room, other_room, &mut map);
     }
     */
+    map.make_borders();
+    map
+}
+
+pub fn perlin_noise_map(width: usize, height: usize, freq: f64) -> Map {
+    let mut map = Map::new(Tile::Grass, width, height);
+    // Now we'll randomly splat a bunch of walls. It won't be pretty, but it's a decent illustration.
+    // First, obtain the thread-local RNG:
+    let rng = Rng::new();
+    let perlin = Perlin::new().set_seed(0u32);
+    let perlin_freq = ScalePoint::new(&perlin).set_scale(freq);
+    let perlin_norm = ScaleBias::new(&perlin_freq)
+        .set_bias(1f64)
+        .set_scale(0.5f64);
+
+    for x in 0..width {
+        for y in 0..height {
+            let value = perlin_norm.get([x as f64, y as f64]);
+            if value > 0.8f64 {
+                map.tiles[x][y] = Tile::Debug;
+            } else if value > 1.0f64 {
+                println!("thats not supposed to happen");
+            }
+        }
+    }
+
     map.make_borders();
     map
 }

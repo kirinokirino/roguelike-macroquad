@@ -42,7 +42,7 @@ use macroquad::{
 };
 
 mod map;
-use crate::map::generators::_random_map;
+use crate::map::generators::perlin_noise_map;
 use crate::map::tiles::{Position, Tile, TileAtlas};
 use crate::map::Rect;
 
@@ -85,7 +85,7 @@ async fn main() {
         "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let map = _random_map(settings.width, settings.height, settings.gen_param);
+    let map = perlin_noise_map(settings.width, settings.height, 0.25f64);
     // We push that map into the world, to draw it with `draw_system()`
     resources.insert(map.tiles);
     resources.insert(map.revealed_tiles);
