@@ -3,35 +3,55 @@ use macroquad::{draw_texture_ex, vec2, Color, DrawTextureParams, Rect, Texture2D
 /// Available kinds of Tiles. `value()` is their position on the `TileAtlas`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tile {
+    Debug,
     Wall,
     Grass,
     Pengu,
+    Door,
+    Chest,
+    Coin,
+    Cat,
 }
 
 impl Tile {
     /// Get their position on the `TileAtlas`.
     const fn value(self) -> (f32, f32) {
         match self {
+            Self::Debug => (0., 0.),
             Self::Wall => (1., 0.),
             Self::Grass => (2., 0.),
             Self::Pengu => (3., 0.),
+            Self::Door => (0., 1.),
+            Self::Chest => (1., 1.),
+            Self::Coin => (2., 1.),
+            Self::Cat => (3., 1.),
         }
     }
     /// Check if entities can walk on that tile.
     pub const fn is_walkable(self) -> bool {
         match self {
+            Self::Debug => true,
             Self::Wall => false,
             Self::Grass => true,
             Self::Pengu => false,
+            Self::Door => false,
+            Self::Chest => false,
+            Self::Coin => true,
+            Self::Cat => false,
         }
     }
 
     /// Check if you can see through that tile.
     pub const fn is_opaque(self) -> bool {
         match self {
+            Self::Debug => false,
             Self::Wall => true,
             Self::Grass => false,
             Self::Pengu => false,
+            Self::Door => true,
+            Self::Chest => true,
+            Self::Coin => false,
+            Self::Cat => false,
         }
     }
 }

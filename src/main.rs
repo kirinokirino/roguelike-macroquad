@@ -42,7 +42,7 @@ use macroquad::{
 };
 
 mod map;
-use crate::map::generators::rooms_map;
+use crate::map::generators::_random_map;
 use crate::map::tiles::{Position, Tile, TileAtlas};
 use crate::map::Rect;
 
@@ -85,7 +85,7 @@ async fn main() {
         "generating the map {}:{} size",
         settings.width, settings.height
     );
-    let map = rooms_map(settings.width, settings.height, settings.gen_param);
+    let map = _random_map(settings.width, settings.height, settings.gen_param);
     // We push that map into the world, to draw it with `draw_system()`
     resources.insert(map.tiles);
     resources.insert(map.revealed_tiles);
@@ -154,23 +154,6 @@ async fn main() {
         next_frame().await
     }
 }
-
-/*
-fn check_moves(world: &mut World) {
-    let mut query = <(&Position, &IsWalkable)>::query();
-    let (left, mut right) = world.split_for_query(&query);
-    let mut mover_query = <&mut Mover>::query();
-    for mover in mover_query.iter_mut(&mut right) {
-        for (pos, is_walkable) in query.iter(&left) {
-            if is_walkable.get() {
-                if pos == mover {
-                    mover.able_to_move = true;
-                }
-            }
-        }
-    }
-}
-*/
 
 /// Calculate the viewshed.
 #[system(for_each)]
